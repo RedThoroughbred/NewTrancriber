@@ -7,6 +7,8 @@
    - Sidebar navigation with intuitive layout
    - Card-based components with subtle shadows
    - Enhanced visual hierarchy and spacing
+   - Improved layout with sidebar design to fit all content on one screen
+   - Reduced vertical scrolling for better usability
 
 2. **Multiple Video Support**
    - Individual metadata fields (title/topic) for each uploaded video
@@ -32,49 +34,72 @@
    - Progress indicators during transcription
    - Error handling and retry options
 
+6. **Advanced Features Modules** (Ready for Integration)
+   - Supabase database integration (module created)
+   - Vector embeddings for semantic search (module created)
+   - Ollama integration for local LLM capabilities (module created)
+   - Transcript summarization and topic extraction (module created)
+   - Natural language querying of transcripts (module created)
+
 ## Future Features to Implement
 
-1. **Confluence Integration**
+1. **Supabase Integration** (Module Ready)
+   - Enable the ready-made Supabase module
+   - Set up PostgreSQL database for transcript storage
+   - Implement vector support for semantic search
+   - Run SQL migrations for setting up the database
+
+2. **Vector Search** (Module Ready)
+   - Enable the ready-made vector search module
+   - Convert transcripts to vector embeddings
+   - Support for OpenAI or local sentence-transformer embeddings
+   - Implement semantic and hybrid search capabilities
+
+3. **Ollama Integration** (Module Ready)
+   - Enable the ready-made Ollama integration module
+   - Configure auto-detection of Ollama running locally
+   - Implement transcript summarization
+   - Enable topic extraction and question answering
+
+4. **Confluence Integration**
    - Direct export to Confluence pages
    - Metadata synchronization with Confluence
    - Link transcripts to existing Confluence pages
    - Team collaboration features
 
-2. **Zoom/Vonage Integration**
+5. **Zoom/Vonage Integration**
    - Automatic recording of Zoom/Vonage meetings
    - Direct transcription from meeting recordings
    - Scheduled transcription of recurring meetings
    - Speaker identification and labeling
 
-3. **Enhanced UI Improvements**
+6. **Enhanced UI Improvements**
    - Dark/light mode toggle functionality
    - More robust responsive design for mobile
    - Customizable theme options
    - Accessibility improvements
 
-4. **Advanced Transcription Features**
+7. **Advanced Transcription Features**
    - Custom vocabulary for domain-specific terms
    - Multiple language support
-   - Summary generation of transcripts
    - Keyword extraction and tagging
 
-5. **Search and Organization**
-   - Full-text search across all transcripts
+8. **Additional Search and Organization**
    - Tag-based organization system
    - Folder structure for transcript organization
    - Advanced filtering options
 
-6. **Editing and Collaboration**
+9. **Editing and Collaboration**
    - In-browser transcript editing
    - Export to multiple formats (PDF, DOCX, etc.)
    - Sharing permissions and access control
    - Comments and collaborative editing
 
-7. **Performance Improvements**
-   - Background processing for large files
-   - Queue system for multiple transcription jobs
-   - Progress saving for interrupted transcriptions
-   - Batch processing capabilities
+10. **Performance Improvements**
+    - Background processing for large files
+    - Queue system for multiple transcription jobs
+    - Progress saving for interrupted transcriptions
+    - Batch processing capabilities
 
 ## Bug Fixes Needed
 
@@ -90,8 +115,9 @@
 
 ## Next Steps Priority
 
-1. Fix the YouTube tab navigation in the sidebar
-2. Complete the multiple video metadata submission functionality
-3. Begin planning for Zoom/Vonage integration
-4. Implement dark/light mode toggle
-5. Add search functionality across transcripts
+1. Test the new UI layout improvements with reduced scrolling
+2. Enable the Supabase integration module for database storage
+3. Enable vector search for natural language queries of transcripts
+4. Connect with local Ollama for transcript summarization
+5. Fix any remaining YouTube tab navigation issues
+6. Begin planning for Zoom/Vonage integration
