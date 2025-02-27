@@ -404,6 +404,9 @@
                 return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
             }
             
+            // Initialize the UI on page load
+            validateUrlInput();
+            
             // Transcribe functionality
             transcribeBtn.addEventListener('click', () => {
                 if (currentMode === 'upload' && files.length === 0) return;
@@ -426,6 +429,8 @@
                 
                 // Disable transcribe button
                 transcribeBtn.disabled = true;
+                
+                let simulateProgress = {};
                 
                 if (currentMode === 'upload') {
                     // Create progress bars for each file
@@ -468,8 +473,9 @@
                         formData.append('file', file);
                     });
                     
-                    // Set up progress simulation
-                    setupProgressSimulation(files.map(f => f.name));
+                    // Setup progress simulation
+                    const fileNames = files.map(f => f.name);
+                    simulateProgress = setupProgressSimulation(fileNames);
                     
                 } else {
                     // For URL/Path mode
@@ -482,19 +488,16 @@
                         formData.append('file_path', videoUrl);
                     }
                     
-                    // Create a single progress bar for the YouTube video
+                    // Create a single progress bar
                     const progressItem = document.createElement('div');
                     progressItem.className = 'flex flex-col';
-                    progressItem.setAttribute('data-file', 'youtube');
+                    progressItem.setAttribute('data-file', 'url-source');
                     
                     const fileInfo = document.createElement('div');
                     fileInfo.className = 'flex justify-between mb-1';
                     
                     const fileName = document.createElement('span');
                     fileName.className = 'text-sm font-medium text-gray-300';
-                    
-                    // Set different text based on the type
-                    const urlType = document.querySelector('input[name="url-type"]:checked').value;
                     fileName.textContent = urlType === 'youtube' ? "YouTube Video" : "Local File";
                     
                     const progressText = document.createElement('span');
@@ -518,8 +521,8 @@
                     
                     progressContainer.appendChild(progressItem);
                     
-                    // Set up progress simulation
-                    setupProgressSimulation(['youtube']);
+                    // Setup progress simulation
+                    simulateProgress = setupProgressSimulation(['url-source']);
                 }
                 
                 // Submit to server
@@ -527,38 +530,6 @@
                     method: 'POST',
                     body: formData
                 })
-                
-                function setupProgressSimulation(itemNames) {
-                    const simulateProgress = {};
-                    
-                    itemNames.forEach(name => {
-                        simulateProgress[name] = {
-                            interval: setInterval(() => {
-                                const progressItem = progressContainer.querySelector(`[data-file="${name}"]`);
-                                if (!progressItem) return;
-                                
-                                const progressBarInner = progressItem.querySelector('.bg-primary-500');
-                                const progressText = progressItem.querySelector('.text-gray-400');
-                                
-                                // Get current progress
-                                const currentProgress = parseInt(progressBarInner.style.width) || 0;
-                                
-                                // Simulate progress that slows down near completion
-                                let increment = 5;
-                                if (currentProgress > 70) increment = 2;
-                                if (currentProgress > 90) increment = 0.5;
-                                
-                                const newProgress = Math.min(99, currentProgress + increment);
-                                
-                                // Update progress
-                                progressBarInner.style.width = `${newProgress}%`;
-                                progressText.textContent = `${Math.round(newProgress)}%`;
-                            }, 300)
-                        };
-                    });
-                    
-                    return simulateProgress;
-                }
                 .then(response => response.json())
                 .then(data => {
                     // Stop progress simulation
@@ -633,6 +604,38 @@
                     transcribeBtn.disabled = false;
                 });
             });
+            
+            function setupProgressSimulation(itemNames) {
+                const simulateProgress = {};
+                
+                itemNames.forEach(name => {
+                    simulateProgress[name] = {
+                        interval: setInterval(() => {
+                            const progressItem = progressContainer.querySelector(`[data-file="${name}"]`);
+                            if (!progressItem) return;
+                            
+                            const progressBarInner = progressItem.querySelector('.bg-primary-500');
+                            const progressText = progressItem.querySelector('.text-gray-400');
+                            
+                            // Get current progress
+                            const currentProgress = parseInt(progressBarInner.style.width) || 0;
+                            
+                            // Simulate progress that slows down near completion
+                            let increment = 5;
+                            if (currentProgress > 70) increment = 2;
+                            if (currentProgress > 90) increment = 0.5;
+                            
+                            const newProgress = Math.min(99, currentProgress + increment);
+                            
+                            // Update progress
+                            progressBarInner.style.width = `${newProgress}%`;
+                            progressText.textContent = `${Math.round(newProgress)}%`;
+                        }, 300)
+                    };
+                });
+                
+                return simulateProgress;
+            }
         });
     </script>
 </body>
