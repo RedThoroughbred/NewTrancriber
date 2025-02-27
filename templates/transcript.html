@@ -212,33 +212,56 @@
             alert('Video file location: {{ transcript.filepath }}');
         }
         
+        function highlightSearchTermInSegments(searchTerm) {
+            if (!searchTerm || searchTerm.length < 2) return [];
+            
+            const segmentElements = document.querySelectorAll('.segment-text');
+            const results = [];
+            
+            // Loop through all segments to find matches
+            segments.forEach((segment, index) => {
+                const segmentText = segment.text.toLowerCase();
+                if (segmentText.includes(searchTerm.toLowerCase())) {
+                    // Highlight the text with a span
+                    const segmentEl = segmentElements[index];
+                    const regex = new RegExp(`(${searchTerm})`, 'gi');
+                    segmentEl.innerHTML = segment.text.replace(regex, '<span class="bg-primary-900 text-primary-200">$1</span>');
+                    
+                    // Add to results
+                    results.push({
+                        index: index,
+                        text: segment.text,
+                        start: segment.start
+                    });
+                }
+            });
+            
+            // Jump to the first result if any
+            if (results.length > 0) {
+                jumpToSegment(results[0].index);
+            }
+            
+            return results;
+        }
+        
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.getElementById('search');
             const searchResults = document.getElementById('search-results');
             const resultsList = document.getElementById('results-list');
             const resultsCount = document.getElementById('results-count');
             
-            searchInput.addEventListener('input', function() {
-                const searchTerm = this.value.toLowerCase().trim();
+            // Check for search parameter in URL (coming from global search)
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlSearchTerm = urlParams.get('search');
+            
+            if (urlSearchTerm) {
+                // Set the search input value
+                searchInput.value = urlSearchTerm;
                 
-                if (searchTerm.length < 2) {
-                    searchResults.classList.add('hidden');
-                    return;
-                }
+                // Perform the search
+                const results = highlightSearchTermInSegments(urlSearchTerm);
                 
-                // Search in segments
-                let results = [];
-                segments.forEach((segment, index) => {
-                    if (segment.text.toLowerCase().includes(searchTerm)) {
-                        results.push({
-                            index: index,
-                            text: segment.text,
-                            start: segment.start
-                        });
-                    }
-                });
-                
-                // Update results list
+                // Update results display
                 resultsList.innerHTML = '';
                 results.forEach(result => {
                     const item = document.createElement('li');
@@ -252,7 +275,7 @@
                     const textEl = document.createElement('p');
                     textEl.className = 'text-sm';
                     
-                    const regex = new RegExp(`(${searchTerm})`, 'gi');
+                    const regex = new RegExp(`(${urlSearchTerm})`, 'gi');
                     const highlightedText = result.text.replace(regex, '<span class="bg-primary-900 text-primary-200">$1</span>');
                     textEl.innerHTML = highlightedText;
                     
@@ -271,9 +294,69 @@
                 
                 if (results.length > 0) {
                     searchResults.classList.remove('hidden');
-                } else {
-                    searchResults.classList.add('hidden');
                 }
+            }
+            
+            // Regular search functionality
+            let searchTimeout;
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase().trim();
+                
+                // Clear existing highlights
+                document.querySelectorAll('.segment-text').forEach((el, index) => {
+                    el.textContent = segments[index].text;
+                });
+                
+                // Clear previous timeout
+                clearTimeout(searchTimeout);
+                
+                if (searchTerm.length < 2) {
+                    searchResults.classList.add('hidden');
+                    return;
+                }
+                
+                // Add a slight delay for better performance
+                searchTimeout = setTimeout(() => {
+                    // Search in segments and highlight matches
+                    const results = highlightSearchTermInSegments(searchTerm);
+                    
+                    // Update results list
+                    resultsList.innerHTML = '';
+                    results.forEach(result => {
+                        const item = document.createElement('li');
+                        item.className = 'p-2 rounded-lg hover:bg-dark-900 cursor-pointer';
+                        
+                        const time = document.createElement('div');
+                        time.className = 'text-xs text-primary-400';
+                        time.textContent = formatTime(result.start);
+                        
+                        // Get the text with highlighted search term
+                        const textEl = document.createElement('p');
+                        textEl.className = 'text-sm';
+                        
+                        const regex = new RegExp(`(${searchTerm})`, 'gi');
+                        const highlightedText = result.text.replace(regex, '<span class="bg-primary-900 text-primary-200">$1</span>');
+                        textEl.innerHTML = highlightedText;
+                        
+                        item.appendChild(time);
+                        item.appendChild(textEl);
+                        
+                        item.addEventListener('click', () => {
+                            jumpToSegment(result.index);
+                        });
+                        
+                        resultsList.appendChild(item);
+                    });
+                    
+                    // Update count and show results
+                    resultsCount.textContent = results.length;
+                    
+                    if (results.length > 0) {
+                        searchResults.classList.remove('hidden');
+                    } else {
+                        searchResults.classList.add('hidden');
+                    }
+                }, 300);
             });
         });
     </script>

@@ -32,6 +32,27 @@ A beautiful, modern application for transcribing videos using Whisper AI.
 
 ## Installation
 
+### Method 1: Easy Start (macOS/Linux)
+
+1. Clone this repository:
+   ```
+   git clone <repository-url>
+   cd transcription_app
+   ```
+
+2. Make sure FFmpeg is installed:
+   - On macOS: `brew install ffmpeg`
+   - On Ubuntu/Debian: `sudo apt update && sudo apt install ffmpeg`
+
+3. Run the start script:
+   ```
+   ./start.sh
+   ```
+
+4. Open your browser and go to: `http://127.0.0.1:5050`
+
+### Method 2: Manual Local Installation
+
 1. Clone this repository:
    ```
    git clone <repository-url>
@@ -59,7 +80,41 @@ A beautiful, modern application for transcribing videos using Whisper AI.
    python app.py
    ```
 
-6. Open your browser and go to: `http://127.0.0.1:5000`
+6. Open your browser and go to: `http://127.0.0.1:5050`
+
+### Method 3: Docker Installation
+
+1. Clone this repository:
+   ```
+   git clone <repository-url>
+   cd transcription_app
+   ```
+
+2. Make sure Docker and Docker Compose are installed on your system.
+
+3. Build and start the container:
+   ```
+   docker-compose up -d
+   ```
+
+4. Open your browser and go to: `http://localhost:5050`
+
+5. To stop the application:
+   ```
+   docker-compose down
+   ```
+
+### Configuration Options
+
+You can modify the Whisper model used for transcription by setting the `WHISPER_MODEL` environment variable:
+
+- `tiny`: Fastest, lowest accuracy
+- `base`: Good balance of speed and accuracy (default)
+- `small`: Better accuracy, slower
+- `medium`: High accuracy, much slower
+- `large`: Highest accuracy, slowest
+
+For Docker installation, uncomment the `WHISPER_MODEL` line in `docker-compose.yml` and set your preferred model size.
 
 ## Usage
 

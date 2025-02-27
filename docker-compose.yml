@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  transcription-app:
+    build: .
+    container_name: transcription-app
+    ports:
+      - "5050:5050"
+    volumes:
+      - ./static/uploads:/app/static/uploads
+      - ./static/transcripts:/app/static/transcripts
+    restart: unless-stopped
+    environment:
+      - FLASK_APP=app.py
+      # Uncomment the line below to use smaller model for faster performance but lower accuracy
+      # - WHISPER_MODEL=base

@@ -27,8 +27,10 @@ model = None  # Lazy loading to avoid startup delay
 def get_model():
     global model
     if model is None:
-        # Use base model for faster loading
-        model = whisper.load_model("base")
+        # Get model size from environment variable or use "base" as default
+        model_size = os.environ.get("WHISPER_MODEL", "base")
+        print(f"Loading Whisper model: {model_size}")
+        model = whisper.load_model(model_size)
     return model
 
 # Routes
@@ -44,9 +46,64 @@ def dashboard():
         if file.endswith('.json'):
             with open(os.path.join(app.config['TRANSCRIPT_FOLDER'], file), 'r') as f:
                 data = json.load(f)
+                # Add a preview of the transcript (first 200 characters)
+                data['preview'] = data['transcript'][:200] + "..." if len(data['transcript']) > 200 else data['transcript']
                 transcripts.append(data)
     
     return render_template('dashboard.html', transcripts=transcripts)
+
+@app.route('/search', methods=['POST'])
+def search_transcripts():
+    query = request.json.get('query', '').lower()
+    if not query or len(query) < 2:
+        return jsonify([])
+    
+    results = []
+    for file in os.listdir(app.config['TRANSCRIPT_FOLDER']):
+        if file.endswith('.json'):
+            with open(os.path.join(app.config['TRANSCRIPT_FOLDER'], file), 'r') as f:
+                data = json.load(f)
+                transcript_text = data['transcript'].lower()
+                
+                if query in transcript_text:
+                    # Find all occurrences of the query
+                    matches = []
+                    last_pos = 0
+                    
+                    # Get up to 3 snippet matches
+                    for _ in range(3):
+                        pos = transcript_text.find(query, last_pos)
+                        if pos == -1:
+                            break
+                            
+                        # Get a snippet of text around the match
+                        start = max(0, pos - 50)
+                        end = min(len(transcript_text), pos + len(query) + 50)
+                        snippet = "..." + transcript_text[start:end] + "..."
+                        
+                        # Highlight the match
+                        highlight_start = max(0, pos - start)
+                        matches.append({
+                            'snippet': snippet,
+                            'highlight_pos': highlight_start,
+                            'highlight_len': len(query)
+                        })
+                        
+                        last_pos = pos + len(query)
+                    
+                    if matches:
+                        results.append({
+                            'id': data['id'],
+                            'title': data['title'],
+                            'date': data['date'],
+                            'matches': matches,
+                            'match_count': transcript_text.count(query)
+                        })
+    
+    # Sort results by number of matches (most matches first)
+    results.sort(key=lambda x: x['match_count'], reverse=True)
+    
+    return jsonify(results[:10])  # Limit to top 10 results
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe():

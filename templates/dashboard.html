@@ -60,7 +60,22 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                 </svg>
                             </div>
-                            <input type="text" id="search" class="w-full pl-10 pr-4 py-2 bg-dark-900 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent" placeholder="Search transcripts...">
+                            <input type="text" id="search" class="w-full pl-10 pr-4 py-2 bg-dark-900 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent" placeholder="Search across all transcripts...">
+                        </div>
+                        
+                        <!-- Global Search Results -->
+                        <div id="global-search-results" class="mt-4 hidden">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="text-sm font-medium text-primary-300">Search Results</h3>
+                                <button id="close-search" class="text-gray-400 hover:text-gray-300">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div id="search-results-container" class="bg-dark-900 rounded-lg p-4 max-h-96 overflow-y-auto divide-y divide-gray-700">
+                                <!-- Results will be added here -->
+                            </div>
                         </div>
                     </div>
 
@@ -129,10 +144,16 @@
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.getElementById('search');
             const transcriptRows = document.querySelectorAll('.transcript-row');
+            const globalSearchResults = document.getElementById('global-search-results');
+            const searchResultsContainer = document.getElementById('search-results-container');
+            const closeSearchBtn = document.getElementById('close-search');
+            
+            let searchTimeout;
             
             searchInput.addEventListener('input', function() {
-                const searchTerm = this.value.toLowerCase();
+                const searchTerm = this.value.toLowerCase().trim();
                 
+                // First handle the table filtering (this is immediate)
                 transcriptRows.forEach(row => {
                     const title = row.querySelector('td:first-child div:first-child').textContent.toLowerCase();
                     const filename = row.querySelector('td:first-child div:last-child').textContent.toLowerCase();
@@ -144,6 +165,111 @@
                         row.classList.add('hidden');
                     }
                 });
+                
+                // Clear previous timeout to avoid multiple requests
+                clearTimeout(searchTimeout);
+                
+                // Only do the global content search if we have at least 2 characters
+                if (searchTerm.length < 2) {
+                    globalSearchResults.classList.add('hidden');
+                    return;
+                }
+                
+                // Set a small delay before searching (debounce)
+                searchTimeout = setTimeout(() => {
+                    // Call the API to search across all transcripts
+                    fetch('/search', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ query: searchTerm })
+                    })
+                    .then(response => response.json())
+                    .then(results => {
+                        // Clear previous results
+                        searchResultsContainer.innerHTML = '';
+                        
+                        if (results.length === 0) {
+                            if (searchTerm.length >= 2) {
+                                searchResultsContainer.innerHTML = `
+                                    <div class="py-6 text-center">
+                                        <p class="text-gray-400">No results found for "${searchTerm}"</p>
+                                    </div>
+                                `;
+                                globalSearchResults.classList.remove('hidden');
+                            } else {
+                                globalSearchResults.classList.add('hidden');
+                            }
+                            return;
+                        }
+                        
+                        // Display the results
+                        results.forEach(result => {
+                            const resultItem = document.createElement('div');
+                            resultItem.className = 'py-4';
+                            
+                            // Create header with title and match count
+                            const header = document.createElement('div');
+                            header.className = 'flex justify-between items-center mb-2';
+                            
+                            const title = document.createElement('a');
+                            title.href = `/transcript/${result.id}`;
+                            title.className = 'text-primary-400 hover:text-primary-300 font-medium';
+                            title.textContent = result.title;
+                            
+                            const matchCount = document.createElement('span');
+                            matchCount.className = 'text-xs bg-primary-900 text-primary-300 px-2 py-1 rounded-full';
+                            matchCount.textContent = `${result.match_count} matches`;
+                            
+                            header.appendChild(title);
+                            header.appendChild(matchCount);
+                            
+                            // Create the snippets
+                            const snippetsContainer = document.createElement('div');
+                            snippetsContainer.className = 'space-y-2 mt-2';
+                            
+                            result.matches.forEach(match => {
+                                const snippet = document.createElement('div');
+                                snippet.className = 'text-sm bg-dark-800 p-2 rounded';
+                                
+                                // Create the snippet with highlighted term
+                                const snippetText = match.snippet;
+                                const beforeHighlight = snippetText.substring(0, match.highlight_pos + 3); // +3 for the "..."
+                                const highlighted = snippetText.substring(match.highlight_pos + 3, match.highlight_pos + 3 + match.highlight_len);
+                                const afterHighlight = snippetText.substring(match.highlight_pos + 3 + match.highlight_len);
+                                
+                                snippet.innerHTML = `
+                                    ${beforeHighlight}<span class="bg-primary-900 text-primary-300">${highlighted}</span>${afterHighlight}
+                                `;
+                                
+                                // Create a link to view at this position
+                                const viewLink = document.createElement('a');
+                                viewLink.href = `/transcript/${result.id}?search=${encodeURIComponent(searchTerm)}`;
+                                viewLink.className = 'text-xs text-primary-400 hover:text-primary-300 block mt-1';
+                                viewLink.textContent = 'View in transcript';
+                                
+                                snippet.appendChild(viewLink);
+                                snippetsContainer.appendChild(snippet);
+                            });
+                            
+                            resultItem.appendChild(header);
+                            resultItem.appendChild(snippetsContainer);
+                            
+                            searchResultsContainer.appendChild(resultItem);
+                        });
+                        
+                        globalSearchResults.classList.remove('hidden');
+                    })
+                    .catch(error => {
+                        console.error('Error searching transcripts:', error);
+                    });
+                }, 300); // 300ms debounce
+            });
+            
+            // Close search results
+            closeSearchBtn.addEventListener('click', () => {
+                globalSearchResults.classList.add('hidden');
             });
         });
     </script>
