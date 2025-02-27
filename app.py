@@ -37,6 +37,32 @@ def get_model():
 @app.route('/')
 def index():
     return render_template('index.html')
+    
+@app.route('/delete/<transcript_id>', methods=['POST'])
+def delete_transcript(transcript_id):
+    transcript_path = os.path.join(app.config['TRANSCRIPT_FOLDER'], f"{transcript_id}.json")
+    
+    if not os.path.exists(transcript_path):
+        return jsonify({'success': False, 'error': 'Transcript not found'}), 404
+    
+    try:
+        # Load transcript to get the video file path
+        with open(transcript_path, 'r') as f:
+            transcript_data = json.load(f)
+            
+        # Delete JSON transcript file
+        os.remove(transcript_path)
+        
+        # Delete text transcript file if it exists
+        text_path = os.path.join(app.config['TRANSCRIPT_FOLDER'], f"{transcript_id}.txt")
+        if os.path.exists(text_path):
+            os.remove(text_path)
+            
+        # Return success response
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/dashboard')
 def dashboard():
