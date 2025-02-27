@@ -68,7 +68,7 @@
                             Upload Files
                         </button>
                         <button id="youtube-tab" class="flex-1 py-2 border-b-2 border-gray-700 text-gray-400 font-medium">
-                            YouTube URL
+                            URL or Path
                         </button>
                     </div>
                     
@@ -90,9 +90,18 @@
                     
                     <div id="youtube-panel" class="hidden">
                         <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-400 mb-1" for="youtube-url">YouTube Video URL</label>
-                            <input type="text" id="youtube-url" placeholder="https://www.youtube.com/watch?v=..." class="w-full bg-dark-800 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-                            <p class="text-sm text-gray-500 mt-1">Paste a YouTube URL to download and transcribe</p>
+                            <label class="block text-sm font-medium text-gray-400 mb-1" for="youtube-url">Video URL or File Path</label>
+                            <input type="text" id="youtube-url" placeholder="https://www.youtube.com/watch?v=... or /path/to/video.mp4" class="w-full bg-dark-800 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                            <p class="text-sm text-gray-500 mt-1">Paste a YouTube URL or enter a file path to transcribe</p>
+                        </div>
+                        <div class="mb-4">
+                            <div class="flex items-center">
+                                <input type="radio" id="url-type-youtube" name="url-type" value="youtube" class="mr-2" checked>
+                                <label for="url-type-youtube" class="text-sm text-gray-400 mr-4">YouTube URL</label>
+                                
+                                <input type="radio" id="url-type-file" name="url-type" value="file" class="mr-2">
+                                <label for="url-type-file" class="text-sm text-gray-400">Local File Path</label>
+                            </div>
                         </div>
                         
                         <div id="youtube-preview" class="hidden mb-4 bg-dark-800 rounded-lg p-4 border border-gray-700">
@@ -208,11 +217,30 @@
             
             // YouTube URL handling
             let youtubeTimeout;
+            const urlTypeRadios = document.querySelectorAll('input[name="url-type"]');
+            
+            // Add event listeners to radio buttons
+            urlTypeRadios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    validateUrlInput();
+                });
+            });
+            
             youtubeUrl.addEventListener('input', function() {
                 clearTimeout(youtubeTimeout);
-                
                 youtubeTimeout = setTimeout(() => {
-                    const url = this.value.trim();
+                    validateUrlInput();
+                }, 500);
+            });
+            
+            function validateUrlInput() {
+                const url = youtubeUrl.value.trim();
+                const urlType = document.querySelector('input[name="url-type"]:checked').value;
+                
+                youtubePreview.classList.add('hidden');
+                
+                if (urlType === 'youtube') {
+                    // YouTube URL validation
                     if (url && isYouTubeUrl(url)) {
                         const videoId = extractYouTubeId(url);
                         if (videoId) {
@@ -221,21 +249,43 @@
                             youtubeThumbnail.innerHTML = `<img src="https://img.youtube.com/vi/${videoId}/mqdefault.jpg" class="w-full h-full object-cover">`;
                             
                             // Get video information
-                            // In a real app, we'd make an API call to get title and other info
-                            // For now just show the URL
                             youtubeTitle.textContent = "YouTube Video";
                             youtubeInfo.textContent = "URL: " + url;
                             
                             youtubePreview.classList.remove('hidden');
                             updateTranscribeButtonState();
+                            return;
                         }
-                    } else {
-                        youtubeVideoId = null;
-                        youtubePreview.classList.add('hidden');
-                        updateTranscribeButtonState();
                     }
-                }, 500);
-            });
+                    youtubeVideoId = null;
+                    updateTranscribeButtonState();
+                } else {
+                    // File path validation
+                    if (url && url.trim() !== '') {
+                        // Basic validation - just check if it's not empty
+                        // We can't really validate a file path on the client side
+                        youtubeVideoId = 'valid'; // Use this as a flag that we have valid input
+                        
+                        // Show file path preview
+                        youtubeThumbnail.innerHTML = `
+                            <div class="flex items-center justify-center w-full h-full bg-dark-900">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                        `;
+                        
+                        youtubeTitle.textContent = "Local Video File";
+                        youtubeInfo.textContent = "Path: " + url;
+                        
+                        youtubePreview.classList.remove('hidden');
+                        updateTranscribeButtonState();
+                        return;
+                    }
+                    youtubeVideoId = null;
+                    updateTranscribeButtonState();
+                }
+            }
             
             function isYouTubeUrl(url) {
                 const regex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$/;
@@ -422,9 +472,15 @@
                     setupProgressSimulation(files.map(f => f.name));
                     
                 } else {
-                    // For YouTube mode
+                    // For URL/Path mode
                     const videoUrl = youtubeUrl.value.trim();
-                    formData.append('youtube_url', videoUrl);
+                    const urlType = document.querySelector('input[name="url-type"]:checked').value;
+                    
+                    if (urlType === 'youtube') {
+                        formData.append('youtube_url', videoUrl);
+                    } else {
+                        formData.append('file_path', videoUrl);
+                    }
                     
                     // Create a single progress bar for the YouTube video
                     const progressItem = document.createElement('div');
@@ -436,7 +492,10 @@
                     
                     const fileName = document.createElement('span');
                     fileName.className = 'text-sm font-medium text-gray-300';
-                    fileName.textContent = "YouTube Video";
+                    
+                    // Set different text based on the type
+                    const urlType = document.querySelector('input[name="url-type"]:checked').value;
+                    fileName.textContent = urlType === 'youtube' ? "YouTube Video" : "Local File";
                     
                     const progressText = document.createElement('span');
                     progressText.className = 'text-sm text-gray-400';

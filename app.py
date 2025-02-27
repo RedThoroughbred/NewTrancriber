@@ -201,6 +201,62 @@ def transcribe():
                 'error': str(e)
             })
             
+    # Check if we're dealing with a file path
+    elif 'file_path' in request.form:
+        import shutil
+        
+        file_path = request.form.get('file_path')
+        
+        # Get metadata
+        title = request.form.get('title', os.path.basename(file_path))
+        topic = request.form.get('topic', '')
+        
+        try:
+            # Verify the file exists
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"File not found: {file_path}")
+            
+            # Generate a unique ID
+            file_id = str(uuid.uuid4())
+            filename = os.path.basename(file_path)
+            dest_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            
+            # Copy the file to our uploads directory
+            shutil.copy2(file_path, dest_path)
+            
+            # Process with Whisper
+            model = get_model()
+            result = model.transcribe(dest_path)
+            
+            # Save transcript as JSON with metadata
+            transcript_data = {
+                'id': file_id,
+                'title': title,
+                'topic': topic,
+                'original_filename': filename,
+                'date': datetime.now().isoformat(),
+                'filepath': file_path,  # Store the original path
+                'transcript': result['text'],
+                'segments': result['segments']
+            }
+            
+            transcript_path = os.path.join(app.config['TRANSCRIPT_FOLDER'], f"{file_id}.json")
+            with open(transcript_path, 'w') as f:
+                json.dump(transcript_data, f)
+            
+            results.append({
+                'id': file_id,
+                'title': title,
+                'success': True
+            })
+            
+        except Exception as e:
+            results.append({
+                'filename': os.path.basename(file_path),
+                'success': False,
+                'error': str(e)
+            })
+            
     # Check if the post request has file uploads
     elif 'file' in request.files:
         files = request.files.getlist('file')
