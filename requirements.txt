@@ -9,3 +9,16 @@ tqdm
 yt-dlp
 python-dotenv
 requests
+
+# Optional dependencies for advanced features
+# Uncomment as needed
+
+# Supabase integration
+# supabase-py==2.0.0
+
+# Vector embeddings
+# sentence-transformers==2.2.2
+# openai==1.3.0
+
+# LLM integration
+# No additional dependencies required beyond requests
