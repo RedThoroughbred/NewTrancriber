@@ -6,23 +6,30 @@ import re
 def is_valid_youtube_url(url):
     """Check if the URL is a valid YouTube URL."""
     youtube_regex = (
-        r'(https?://)?(www\.)?'
-        '(youtube|youtu|youtube-nocookie)\.(com|be)/'
-        '(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?\s]{11})')
+        r'(https?://)?(www\.)?' 
+        r'(youtube|youtu|youtube-nocookie)\.(com|be)/' 
+        r'(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?\s]{11})')
     
     match = re.match(youtube_regex, url)
     return match is not None
 
 def get_youtube_id(url):
     """Extract YouTube video ID from a URL."""
-    youtube_regex = (
-        r'(https?://)?(www\.)?'
-        '(youtube|youtu|youtube-nocookie)\.(com|be)/'
-        '(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?\s]{11})')
+    # Simple method for most YouTube URLs
+    if 'youtu.be/' in url:
+        return url.split('youtu.be/')[1].split('?')[0].split('&')[0]
+    elif 'youtube.com/watch' in url:
+        try:
+            from urllib.parse import parse_qs, urlparse
+            query = parse_qs(urlparse(url).query)
+            return query.get('v', [''])[0]
+        except:
+            # Fallback to regex if parsing fails
+            import re
+            match = re.search(r'v=([^&]+)', url)
+            if match:
+                return match.group(1)
     
-    match = re.match(youtube_regex, url)
-    if match:
-        return match.group(6)
     return None
 
 def download_youtube_video(url, output_folder):
