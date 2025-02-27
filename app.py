@@ -133,12 +133,6 @@ def search_transcripts():
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe():
-    # Check if the post request has the file part
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
-    
-    files = request.files.getlist('file')
-    
     # Clean upload folder
     for filename in os.listdir(app.config['UPLOAD_FOLDER']):
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -150,58 +144,121 @@ def transcribe():
     
     results = []
     
-    for file in files:
-        if file.filename == '':
-            continue
+    # Check if we're dealing with YouTube URL
+    if 'youtube_url' in request.form:
+        from youtube_downloader import download_youtube_video
+        
+        youtube_url = request.form.get('youtube_url')
+        
+        # Get metadata
+        title = request.form.get('title', '')
+        topic = request.form.get('topic', '')
+        
+        try:
+            # Download the YouTube video
+            video_info = download_youtube_video(youtube_url, app.config['UPLOAD_FOLDER'])
             
-        if file:
-            # Generate unique filename
-            original_filename = secure_filename(file.filename)
-            file_id = str(uuid.uuid4())
-            extension = os.path.splitext(original_filename)[1]
-            filename = f"{file_id}{extension}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file_id = video_info['file_id']
+            filepath = video_info['file_path']
             
-            # Save the file
-            file.save(filepath)
+            # Use video title if no title provided
+            if not title:
+                title = video_info['title']
             
-            # Get metadata
-            title = request.form.get('title', original_filename)
-            topic = request.form.get('topic', '')
+            # Process with Whisper
+            model = get_model()
+            result = model.transcribe(filepath)
             
-            # Process with Whisper (in a real app, would use Celery for background processing)
-            try:
-                model = get_model()
-                result = model.transcribe(filepath)
+            # Save transcript as JSON with metadata
+            transcript_data = {
+                'id': file_id,
+                'title': title,
+                'topic': topic,
+                'original_filename': f"{video_info['title']}.mp4",
+                'date': datetime.now().isoformat(),
+                'filepath': filepath,
+                'transcript': result['text'],
+                'segments': result['segments'],
+                'youtube_id': video_info['video_id'],
+                'youtube_url': youtube_url,
+                'youtube_channel': video_info['channel']
+            }
+            
+            transcript_path = os.path.join(app.config['TRANSCRIPT_FOLDER'], f"{file_id}.json")
+            with open(transcript_path, 'w') as f:
+                json.dump(transcript_data, f)
+            
+            results.append({
+                'id': file_id,
+                'title': title,
+                'success': True
+            })
+            
+        except Exception as e:
+            results.append({
+                'filename': 'YouTube Video',
+                'success': False,
+                'error': str(e)
+            })
+            
+    # Check if the post request has file uploads
+    elif 'file' in request.files:
+        files = request.files.getlist('file')
+        
+        for file in files:
+            if file.filename == '':
+                continue
                 
-                # Save transcript as JSON with metadata
-                transcript_data = {
-                    'id': file_id,
-                    'title': title,
-                    'topic': topic,
-                    'original_filename': original_filename,
-                    'date': datetime.now().isoformat(),
-                    'filepath': filepath,
-                    'transcript': result['text'],
-                    'segments': result['segments']
-                }
+            if file:
+                # Generate unique filename
+                original_filename = secure_filename(file.filename)
+                file_id = str(uuid.uuid4())
+                extension = os.path.splitext(original_filename)[1]
+                filename = f"{file_id}{extension}"
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 
-                transcript_path = os.path.join(app.config['TRANSCRIPT_FOLDER'], f"{file_id}.json")
-                with open(transcript_path, 'w') as f:
-                    json.dump(transcript_data, f)
+                # Save the file
+                file.save(filepath)
                 
-                results.append({
-                    'id': file_id,
-                    'title': title,
-                    'success': True
-                })
+                # Get metadata
+                title = request.form.get('title', original_filename)
+                topic = request.form.get('topic', '')
                 
-            except Exception as e:
-                results.append({
-                    'filename': original_filename,
-                    'success': False,
-                    'error': str(e)
-                })
+                # Process with Whisper (in a real app, would use Celery for background processing)
+                try:
+                    model = get_model()
+                    result = model.transcribe(filepath)
+                    
+                    # Save transcript as JSON with metadata
+                    transcript_data = {
+                        'id': file_id,
+                        'title': title,
+                        'topic': topic,
+                        'original_filename': original_filename,
+                        'date': datetime.now().isoformat(),
+                        'filepath': filepath,
+                        'transcript': result['text'],
+                        'segments': result['segments']
+                    }
+                    
+                    transcript_path = os.path.join(app.config['TRANSCRIPT_FOLDER'], f"{file_id}.json")
+                    with open(transcript_path, 'w') as f:
+                        json.dump(transcript_data, f)
+                    
+                    results.append({
+                        'id': file_id,
+                        'title': title,
+                        'success': True
+                    })
+                    
+                except Exception as e:
+                    results.append({
+                        'filename': original_filename,
+                        'success': False,
+                        'error': str(e)
+                    })
+    else:
+        return jsonify({'error': 'No file or YouTube URL provided'}), 400
     
     return jsonify(results)
 

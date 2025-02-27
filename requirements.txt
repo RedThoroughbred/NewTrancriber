@@ -6,3 +6,6 @@ gunicorn==21.2.0
 ffmpeg-python==0.2.0
 torch
 tqdm
+yt-dlp
+python-dotenv
+requests

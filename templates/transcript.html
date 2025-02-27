@@ -115,10 +115,25 @@
                                     <p class="text-sm text-gray-400">File</p>
                                     <p class="truncate">{{ transcript.original_filename }}</p>
                                 </div>
+                                {% if transcript.youtube_url is defined and transcript.youtube_url %}
+                                <div>
+                                    <p class="text-sm text-gray-400">YouTube</p>
+                                    <a href="{{ transcript.youtube_url }}" target="_blank" class="text-primary-400 hover:text-primary-300 truncate">
+                                        {{ transcript.youtube_url }}
+                                    </a>
+                                </div>
+                                {% if transcript.youtube_channel is defined and transcript.youtube_channel %}
+                                <div>
+                                    <p class="text-sm text-gray-400">Channel</p>
+                                    <p class="truncate">{{ transcript.youtube_channel }}</p>
+                                </div>
+                                {% endif %}
+                                {% else %}
                                 <div>
                                     <p class="text-sm text-gray-400">Storage Path</p>
                                     <p class="truncate text-xs">{{ transcript.filepath }}</p>
                                 </div>
+                                {% endif %}
                             </div>
                         </div>
 

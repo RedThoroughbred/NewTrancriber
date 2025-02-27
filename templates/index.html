@@ -60,18 +60,53 @@
             </section>
 
             <section class="bg-dark-800 rounded-xl p-8 shadow-lg mb-12">
-                <div id="dropzone" class="dropzone mb-6">
-                    <div id="dropzone-text">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                        <p class="text-lg font-medium">Drag and drop video files here</p>
-                        <p class="text-sm text-gray-400 mt-2">or click to select files</p>
+                <div class="bg-dark-900 rounded-lg p-4 mb-6 border border-gray-700">
+                    <h3 class="text-lg font-medium mb-2">Choose your source</h3>
+                    
+                    <div class="flex mb-4">
+                        <button id="upload-tab" class="flex-1 py-2 border-b-2 border-primary-500 text-primary-400 font-medium">
+                            Upload Files
+                        </button>
+                        <button id="youtube-tab" class="flex-1 py-2 border-b-2 border-gray-700 text-gray-400 font-medium">
+                            YouTube URL
+                        </button>
                     </div>
-                    <div id="file-list" class="hidden mt-4">
-                        <ul id="selected-files" class="divide-y divide-gray-700"></ul>
+                    
+                    <div id="upload-panel">
+                        <div id="dropzone" class="dropzone">
+                            <div id="dropzone-text">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                                <p class="text-lg font-medium">Drag and drop video files here</p>
+                                <p class="text-sm text-gray-400 mt-2">or click to select files</p>
+                            </div>
+                            <div id="file-list" class="hidden mt-4">
+                                <ul id="selected-files" class="divide-y divide-gray-700"></ul>
+                            </div>
+                            <input type="file" id="file-input" class="hidden" multiple accept="video/*">
+                        </div>
                     </div>
-                    <input type="file" id="file-input" class="hidden" multiple accept="video/*">
+                    
+                    <div id="youtube-panel" class="hidden">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-400 mb-1" for="youtube-url">YouTube Video URL</label>
+                            <input type="text" id="youtube-url" placeholder="https://www.youtube.com/watch?v=..." class="w-full bg-dark-800 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                            <p class="text-sm text-gray-500 mt-1">Paste a YouTube URL to download and transcribe</p>
+                        </div>
+                        
+                        <div id="youtube-preview" class="hidden mb-4 bg-dark-800 rounded-lg p-4 border border-gray-700">
+                            <div class="flex items-center">
+                                <div id="youtube-thumbnail" class="w-24 h-16 bg-gray-700 rounded mr-4 flex-shrink-0 overflow-hidden">
+                                    <!-- Thumbnail will be inserted here -->
+                                </div>
+                                <div>
+                                    <h4 id="youtube-title" class="font-medium">Video title</h4>
+                                    <p id="youtube-info" class="text-sm text-gray-400">Channel • Duration</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="mb-6">
@@ -115,6 +150,20 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Tab switching
+            const uploadTab = document.getElementById('upload-tab');
+            const youtubeTab = document.getElementById('youtube-tab');
+            const uploadPanel = document.getElementById('upload-panel');
+            const youtubePanel = document.getElementById('youtube-panel');
+            
+            // YouTube elements
+            const youtubeUrl = document.getElementById('youtube-url');
+            const youtubePreview = document.getElementById('youtube-preview');
+            const youtubeThumbnail = document.getElementById('youtube-thumbnail');
+            const youtubeTitle = document.getElementById('youtube-title');
+            const youtubeInfo = document.getElementById('youtube-info');
+            
+            // File upload elements
             const dropzone = document.getElementById('dropzone');
             const fileInput = document.getElementById('file-input');
             const fileList = document.getElementById('file-list');
@@ -125,7 +174,87 @@
             const progressContainer = document.getElementById('progress-container');
             const resultsSection = document.getElementById('results-section');
             const resultsContainer = document.getElementById('results-container');
+            
             let files = [];
+            let youtubeVideoId = null;
+            let currentMode = 'upload'; // 'upload' or 'youtube'
+            
+            // Tab switching logic
+            uploadTab.addEventListener('click', () => {
+                uploadTab.classList.add('border-primary-500', 'text-primary-400');
+                uploadTab.classList.remove('border-gray-700', 'text-gray-400');
+                youtubeTab.classList.add('border-gray-700', 'text-gray-400');
+                youtubeTab.classList.remove('border-primary-500', 'text-primary-400');
+                
+                uploadPanel.classList.remove('hidden');
+                youtubePanel.classList.add('hidden');
+                
+                currentMode = 'upload';
+                updateTranscribeButtonState();
+            });
+            
+            youtubeTab.addEventListener('click', () => {
+                youtubeTab.classList.add('border-primary-500', 'text-primary-400');
+                youtubeTab.classList.remove('border-gray-700', 'text-gray-400');
+                uploadTab.classList.add('border-gray-700', 'text-gray-400');
+                uploadTab.classList.remove('border-primary-500', 'text-primary-400');
+                
+                youtubePanel.classList.remove('hidden');
+                uploadPanel.classList.add('hidden');
+                
+                currentMode = 'youtube';
+                updateTranscribeButtonState();
+            });
+            
+            // YouTube URL handling
+            let youtubeTimeout;
+            youtubeUrl.addEventListener('input', function() {
+                clearTimeout(youtubeTimeout);
+                
+                youtubeTimeout = setTimeout(() => {
+                    const url = this.value.trim();
+                    if (url && isYouTubeUrl(url)) {
+                        const videoId = extractYouTubeId(url);
+                        if (videoId) {
+                            youtubeVideoId = videoId;
+                            // Show preview with thumbnail
+                            youtubeThumbnail.innerHTML = `<img src="https://img.youtube.com/vi/${videoId}/mqdefault.jpg" class="w-full h-full object-cover">`;
+                            
+                            // Get video information
+                            // In a real app, we'd make an API call to get title and other info
+                            // For now just show the URL
+                            youtubeTitle.textContent = "YouTube Video";
+                            youtubeInfo.textContent = "URL: " + url;
+                            
+                            youtubePreview.classList.remove('hidden');
+                            updateTranscribeButtonState();
+                        }
+                    } else {
+                        youtubeVideoId = null;
+                        youtubePreview.classList.add('hidden');
+                        updateTranscribeButtonState();
+                    }
+                }, 500);
+            });
+            
+            function isYouTubeUrl(url) {
+                const regex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$/;
+                return regex.test(url);
+            }
+            
+            function extractYouTubeId(url) {
+                const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+                const match = url.match(regExp);
+                return (match && match[7].length === 11) ? match[7] : null;
+            }
+            
+            function updateTranscribeButtonState() {
+                if (currentMode === 'upload') {
+                    transcribeBtn.disabled = files.length === 0;
+                } else {
+                    transcribeBtn.disabled = !youtubeVideoId;
+                }
+            }
 
             // Dropzone functionality
             dropzone.addEventListener('click', () => fileInput.click());
@@ -227,25 +356,87 @@
             
             // Transcribe functionality
             transcribeBtn.addEventListener('click', () => {
-                if (files.length === 0) return;
+                if (currentMode === 'upload' && files.length === 0) return;
+                if (currentMode === 'youtube' && !youtubeVideoId) return;
                 
                 // Show progress section
                 progressSection.classList.remove('hidden');
                 resultsSection.classList.add('hidden');
                 progressContainer.innerHTML = '';
                 
-                // Create progress bars for each file
-                files.forEach(file => {
+                // Create FormData
+                const formData = new FormData();
+                
+                // Add metadata
+                const title = document.getElementById('title').value;
+                const topic = document.getElementById('topic').value;
+                
+                if (title) formData.append('title', title);
+                if (topic) formData.append('topic', topic);
+                
+                // Disable transcribe button
+                transcribeBtn.disabled = true;
+                
+                if (currentMode === 'upload') {
+                    // Create progress bars for each file
+                    files.forEach(file => {
+                        const progressItem = document.createElement('div');
+                        progressItem.className = 'flex flex-col';
+                        progressItem.setAttribute('data-file', file.name);
+                        
+                        const fileInfo = document.createElement('div');
+                        fileInfo.className = 'flex justify-between mb-1';
+                        
+                        const fileName = document.createElement('span');
+                        fileName.className = 'text-sm font-medium text-gray-300';
+                        fileName.textContent = file.name;
+                        
+                        const progressText = document.createElement('span');
+                        progressText.className = 'text-sm text-gray-400';
+                        progressText.textContent = '0%';
+                        
+                        fileInfo.appendChild(fileName);
+                        fileInfo.appendChild(progressText);
+                        
+                        const progressBar = document.createElement('div');
+                        progressBar.className = 'w-full bg-gray-700 rounded-full h-2.5';
+                        
+                        const progressBarInner = document.createElement('div');
+                        progressBarInner.className = 'bg-primary-500 h-2.5 rounded-full';
+                        progressBarInner.style.width = '0%';
+                        
+                        progressBar.appendChild(progressBarInner);
+                        
+                        progressItem.appendChild(fileInfo);
+                        progressItem.appendChild(progressBar);
+                        
+                        progressContainer.appendChild(progressItem);
+                    });
+                    
+                    // Add files to FormData
+                    files.forEach(file => {
+                        formData.append('file', file);
+                    });
+                    
+                    // Set up progress simulation
+                    setupProgressSimulation(files.map(f => f.name));
+                    
+                } else {
+                    // For YouTube mode
+                    const videoUrl = youtubeUrl.value.trim();
+                    formData.append('youtube_url', videoUrl);
+                    
+                    // Create a single progress bar for the YouTube video
                     const progressItem = document.createElement('div');
                     progressItem.className = 'flex flex-col';
-                    progressItem.setAttribute('data-file', file.name);
+                    progressItem.setAttribute('data-file', 'youtube');
                     
                     const fileInfo = document.createElement('div');
                     fileInfo.className = 'flex justify-between mb-1';
                     
                     const fileName = document.createElement('span');
                     fileName.className = 'text-sm font-medium text-gray-300';
-                    fileName.textContent = file.name;
+                    fileName.textContent = "YouTube Video";
                     
                     const progressText = document.createElement('span');
                     progressText.className = 'text-sm text-gray-400';
@@ -267,58 +458,48 @@
                     progressItem.appendChild(progressBar);
                     
                     progressContainer.appendChild(progressItem);
-                });
-                
-                // Create FormData and add files
-                const formData = new FormData();
-                files.forEach(file => {
-                    formData.append('file', file);
-                });
-                
-                // Add metadata
-                const title = document.getElementById('title').value;
-                const topic = document.getElementById('topic').value;
-                
-                if (title) formData.append('title', title);
-                if (topic) formData.append('topic', topic);
-                
-                // Disable transcribe button
-                transcribeBtn.disabled = true;
-                
-                // Simulate progress (in a real app, you'd use SSE or WebSockets for live progress)
-                const simulateProgress = {};
-                
-                files.forEach(file => {
-                    simulateProgress[file.name] = {
-                        interval: setInterval(() => {
-                            const progressItem = progressContainer.querySelector(`[data-file="${file.name}"]`);
-                            if (!progressItem) return;
-                            
-                            const progressBarInner = progressItem.querySelector('.bg-primary-500');
-                            const progressText = progressItem.querySelector('.text-gray-400');
-                            
-                            // Get current progress
-                            const currentProgress = parseInt(progressBarInner.style.width) || 0;
-                            
-                            // Simulate progress that slows down near completion
-                            let increment = 5;
-                            if (currentProgress > 70) increment = 2;
-                            if (currentProgress > 90) increment = 0.5;
-                            
-                            const newProgress = Math.min(99, currentProgress + increment);
-                            
-                            // Update progress
-                            progressBarInner.style.width = `${newProgress}%`;
-                            progressText.textContent = `${Math.round(newProgress)}%`;
-                        }, 300)
-                    };
-                });
+                    
+                    // Set up progress simulation
+                    setupProgressSimulation(['youtube']);
+                }
                 
                 // Submit to server
                 fetch('/transcribe', {
                     method: 'POST',
                     body: formData
                 })
+                
+                function setupProgressSimulation(itemNames) {
+                    const simulateProgress = {};
+                    
+                    itemNames.forEach(name => {
+                        simulateProgress[name] = {
+                            interval: setInterval(() => {
+                                const progressItem = progressContainer.querySelector(`[data-file="${name}"]`);
+                                if (!progressItem) return;
+                                
+                                const progressBarInner = progressItem.querySelector('.bg-primary-500');
+                                const progressText = progressItem.querySelector('.text-gray-400');
+                                
+                                // Get current progress
+                                const currentProgress = parseInt(progressBarInner.style.width) || 0;
+                                
+                                // Simulate progress that slows down near completion
+                                let increment = 5;
+                                if (currentProgress > 70) increment = 2;
+                                if (currentProgress > 90) increment = 0.5;
+                                
+                                const newProgress = Math.min(99, currentProgress + increment);
+                                
+                                // Update progress
+                                progressBarInner.style.width = `${newProgress}%`;
+                                progressText.textContent = `${Math.round(newProgress)}%`;
+                            }, 300)
+                        };
+                    });
+                    
+                    return simulateProgress;
+                }
                 .then(response => response.json())
                 .then(data => {
                     // Stop progress simulation
