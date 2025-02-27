@@ -54,135 +54,89 @@
         </header>
 
         <main class="max-w-4xl mx-auto">
-            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                <!-- Left sidebar with intro text -->
-                <div class="lg:col-span-1">
-                    <section class="bg-dark-800 rounded-xl p-4 shadow-lg">
-                        <h2 class="text-xl font-semibold mb-3">Video Transcriber</h2>
-                        <p class="text-gray-400 mb-4 text-sm">Transform videos to text with AI-powered transcription</p>
-                        <div class="border-t border-gray-700 pt-3">
-                            <h3 class="text-sm font-medium text-primary-300 mb-2">Features:</h3>
-                            <ul class="text-sm text-gray-400 space-y-2">
-                                <li class="flex items-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-primary-400" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                    </svg>
-                                    Multiple file uploads
-                                </li>
-                                <li class="flex items-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-primary-400" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                    </svg>
-                                    YouTube video support
-                                </li>
-                                <li class="flex items-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-primary-400" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                    </svg>
-                                    Text search within transcripts
-                                </li>
-                                <li class="flex items-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-primary-400" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                    </svg>
-                                    Download transcripts
-                                </li>
-                            </ul>
-                        </div>
-                    </section>
-                </div>
-                
-                <!-- Main content -->
-                <div class="lg:col-span-4">
-                    <section class="bg-dark-800 rounded-xl p-6 shadow-lg">
-                        <div class="bg-dark-900 rounded-lg p-4 mb-6 border border-gray-700">
-                            <h3 class="text-lg font-medium mb-2">Choose your source</h3>
-                            
-                            <div class="flex mb-4">
-                                <button id="upload-tab" onclick="switchTab('upload')" class="flex-1 py-2 border-b-2 border-primary-500 text-primary-400 font-medium">
-                                    Upload Files
-                                </button>
-                                <button id="youtube-tab" onclick="switchTab('youtube')" class="flex-1 py-2 border-b-2 border-gray-700 text-gray-400 font-medium">
-                                    URL or Path
-                                </button>
-                            </div>
-                            
-                            <div id="upload-panel">
-                                <div id="dropzone" class="dropzone">
-                                    <div id="dropzone-text">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-14 w-14 mx-auto mb-3 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                        </svg>
-                                        <p class="text-lg font-medium">Drag and drop video files here</p>
-                                        <p class="text-sm text-gray-400 mt-2">or click to select files</p>
-                                    </div>
-                                    <div id="file-list" class="hidden mt-4">
-                                        <ul id="selected-files" class="divide-y divide-gray-700"></ul>
-                                    </div>
-                                    <input type="file" id="file-input" class="hidden" multiple accept="video/*,audio/*">
-                                </div>
-                                
-                                <!-- Individual file metadata fields -->
-                                <div id="advanced-file-list" class="hidden mt-4">
-                                    <h3 class="text-md font-medium text-primary-300 mb-2">File Details</h3>
-                                    <div id="file-items-container" class="space-y-3">
-                                        <!-- Individual file items with metadata fields will be dynamically added here -->
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div id="youtube-panel" class="hidden">
-                                <div class="mb-4">
-                                    <label class="block text-sm font-medium text-gray-400 mb-1" for="youtube-url">Video URL or File Path</label>
-                                    <input type="text" id="youtube-url" placeholder="https://www.youtube.com/watch?v=... or /path/to/video.mp4" class="w-full bg-dark-800 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-                                    <p class="text-sm text-gray-500 mt-1">Paste a YouTube URL or enter a file path to transcribe</p>
-                                </div>
-                                <div class="mb-4">
-                                    <div class="flex items-center">
-                                        <input type="radio" id="url-type-youtube" name="url-type" value="youtube" class="mr-2" checked>
-                                        <label for="url-type-youtube" class="text-sm text-gray-400 mr-4">YouTube URL</label>
-                                        
-                                        <input type="radio" id="url-type-file" name="url-type" value="file" class="mr-2">
-                                        <label for="url-type-file" class="text-sm text-gray-400">Local File Path</label>
-                                    </div>
-                                </div>
-                                
-                                <div id="youtube-preview" class="hidden mb-4 bg-dark-800 rounded-lg p-4 border border-gray-700">
-                                    <div class="flex items-center">
-                                        <div id="youtube-thumbnail" class="w-24 h-16 bg-gray-700 rounded mr-4 flex-shrink-0 overflow-hidden">
-                                            <!-- Thumbnail will be inserted here -->
-                                        </div>
-                                        <div>
-                                            <h4 id="youtube-title" class="font-medium">Video title</h4>
-                                            <p id="youtube-info" class="text-sm text-gray-400">Channel • Duration</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Title and topic for URL/Path input -->
-                                <div class="mt-6">
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-400 mb-1" for="title">Title (Optional)</label>
-                                            <input type="text" id="title" class="w-full bg-dark-900 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-                                        </div>
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-400 mb-1" for="topic">Topic (Optional)</label>
-                                            <input type="text" id="topic" class="w-full bg-dark-900 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+            <section class="mb-12 text-center">
+                <h2 class="text-2xl font-semibold mb-4">Transform Video to Text with Precision</h2>
+                <p class="text-gray-400 mb-8">Upload your videos and get accurate transcriptions powered by Whisper AI</p>
+            </section>
 
-                        <div class="flex justify-center">
-                            <button id="transcribe-btn" class="bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-8 rounded-lg transition transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
-                                Transcribe Now
-                            </button>
+            <section class="bg-dark-800 rounded-xl p-8 shadow-lg mb-12">
+                <div class="bg-dark-900 rounded-lg p-4 mb-6 border border-gray-700">
+                    <h3 class="text-lg font-medium mb-2">Choose your source</h3>
+                    
+                    <div class="flex mb-4">
+                        <button id="upload-tab" class="flex-1 py-2 border-b-2 border-primary-500 text-primary-400 font-medium">
+                            Upload Files
+                        </button>
+                        <button id="youtube-tab" class="flex-1 py-2 border-b-2 border-gray-700 text-gray-400 font-medium">
+                            URL or Path
+                        </button>
+                    </div>
+                    
+                    <div id="upload-panel">
+                        <div id="dropzone" class="dropzone">
+                            <div id="dropzone-text">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                                <p class="text-lg font-medium">Drag and drop video files here</p>
+                                <p class="text-sm text-gray-400 mt-2">or click to select files</p>
+                            </div>
+                            <div id="file-list" class="hidden mt-4">
+                                <ul id="selected-files" class="divide-y divide-gray-700"></ul>
+                            </div>
+                            <input type="file" id="file-input" class="hidden" multiple accept="video/*,audio/*">
                         </div>
-                    </section>
+                    </div>
+                    
+                    <div id="youtube-panel" class="hidden">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-400 mb-1" for="youtube-url">Video URL or File Path</label>
+                            <input type="text" id="youtube-url" placeholder="https://www.youtube.com/watch?v=... or /path/to/video.mp4" class="w-full bg-dark-800 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                            <p class="text-sm text-gray-500 mt-1">Paste a YouTube URL or enter a file path to transcribe</p>
+                        </div>
+                        <div class="mb-4">
+                            <div class="flex items-center">
+                                <input type="radio" id="url-type-youtube" name="url-type" value="youtube" class="mr-2" checked>
+                                <label for="url-type-youtube" class="text-sm text-gray-400 mr-4">YouTube URL</label>
+                                
+                                <input type="radio" id="url-type-file" name="url-type" value="file" class="mr-2">
+                                <label for="url-type-file" class="text-sm text-gray-400">Local File Path</label>
+                            </div>
+                        </div>
+                        
+                        <div id="youtube-preview" class="hidden mb-4 bg-dark-800 rounded-lg p-4 border border-gray-700">
+                            <div class="flex items-center">
+                                <div id="youtube-thumbnail" class="w-24 h-16 bg-gray-700 rounded mr-4 flex-shrink-0 overflow-hidden">
+                                    <!-- Thumbnail will be inserted here -->
+                                </div>
+                                <div>
+                                    <h4 id="youtube-title" class="font-medium">Video title</h4>
+                                    <p id="youtube-info" class="text-sm text-gray-400">Channel • Duration</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
+
+                <div class="mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-400 mb-1" for="title">Title (Optional)</label>
+                            <input type="text" id="title" class="w-full bg-dark-900 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-400 mb-1" for="topic">Topic (Optional)</label>
+                            <input type="text" id="topic" class="w-full bg-dark-900 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-center">
+                    <button id="transcribe-btn" class="bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-8 rounded-lg transition transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Transcribe Now
+                    </button>
+                </div>
+            </section>
 
             <section id="progress-section" class="hidden bg-dark-800 rounded-xl p-8 shadow-lg mb-12">
                 <h3 class="text-xl font-semibold mb-4">Transcription in Progress</h3>
@@ -204,27 +158,6 @@
     </div>
 
     <script>
-        // Tab switching function
-        function switchTab(tabName) {
-            if (tabName === 'upload') {
-                document.getElementById('youtube-panel').classList.add('hidden');
-                document.getElementById('upload-panel').classList.remove('hidden');
-                document.getElementById('upload-tab').classList.add('border-primary-500', 'text-primary-400');
-                document.getElementById('upload-tab').classList.remove('border-gray-700', 'text-gray-400');
-                document.getElementById('youtube-tab').classList.add('border-gray-700', 'text-gray-400');
-                document.getElementById('youtube-tab').classList.remove('border-primary-500', 'text-primary-400');
-                window.currentMode = 'upload';
-            } else if (tabName === 'youtube') {
-                document.getElementById('upload-panel').classList.add('hidden');
-                document.getElementById('youtube-panel').classList.remove('hidden');
-                document.getElementById('youtube-tab').classList.add('border-primary-500', 'text-primary-400');
-                document.getElementById('youtube-tab').classList.remove('border-gray-700', 'text-gray-400');
-                document.getElementById('upload-tab').classList.add('border-gray-700', 'text-gray-400');
-                document.getElementById('upload-tab').classList.remove('border-primary-500', 'text-primary-400');
-                window.currentMode = 'youtube';
-            }
-        }
-        
         document.addEventListener('DOMContentLoaded', function() {
             // Tab switching
             const uploadTab = document.getElementById('upload-tab');

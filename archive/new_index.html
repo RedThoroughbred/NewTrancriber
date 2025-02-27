@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoScript Transcriber</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        // Purple/violet color palette
+                        accent: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            200: '#ddd6fe',
+                            300: '#c4b5fd',
+                            400: '#a78bfa',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                            800: '#5b21b6',
+                            900: '#4c1d95',
+                        },
+                        dark: {
+                            800: '#1f2937',
+                            900: '#111827',
+                            950: '#0a0a0c',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Regular CSS styles instead of Tailwind's @apply */
+        .dropzone {
+            border: 2px dashed #c4b5fd;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .dropzone.active {
+            border-color: #8b5cf6;
+            background-color: rgba(31, 41, 55, 0.5);
+        }
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+        .sidebar-item:hover {
+            background-color: #1f2937;
+        }
+        .sidebar-item.active {
+            background-color: rgba(76, 29, 149, 0.4);
+            color: white;
+        }
+        .sidebar-item-icon {
+            width: 1.25rem;
+            height: 1.25rem;
+            margin-right: 0.75rem;
+        }
+        .glass-effect {
+            background-color: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(4px);
+        }
+        .btn-primary {
+            background: linear-gradient(to right, #7c3aed, #6d28d9);
+            color: white;
+            font-weight: 500;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(to right, #6d28d9, #5b21b6);
+            transform: scale(1.05);
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background-color: #1f2937;
+            color: white;
+            border: 1px solid #374151;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-secondary:hover {
+            background-color: #374151;
+        }
+        .input-field {
+            width: 100%;
+            background-color: #111827;
+            border: 1px solid #374151;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            color: white;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
+        }
+        .card {
+            background-color: rgba(31, 41, 55, 0.3);
+            border: 1px solid #374151;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+    </style>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body style="background: linear-gradient(to bottom right, #0a0a0c, #111827, #1f2937); color: white; min-height: 100vh; font-family: Inter, system-ui, sans-serif;">
+    <div style="display: flex; height: 100vh; overflow: hidden;">
+        <!-- Left Sidebar -->
+        <div style="width: 16rem; border-right: 1px solid #1f2937;" class="glass-effect">
+            <div style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid #1f2937;">
+                <div class="mr-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-accent-500" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <h1 class="text-xl font-semibold">Echo<span class="text-accent-400">Script</span></h1>
+            </div>
+            
+            <nav class="p-4">
+                <h2 class="text-xs uppercase tracking-wider text-gray-500 mb-4">Input Source</h2>
+                <div class="space-y-2">
+                    <button id="upload-tab" class="sidebar-item active w-full text-left">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="sidebar-item-icon text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        Upload Files
+                    </button>
+                    <button id="youtube-tab" class="sidebar-item w-full text-left">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="sidebar-item-icon text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        YouTube URL
+                    </button>
+                    <button id="path-tab" class="sidebar-item w-full text-left">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="sidebar-item-icon text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                        </svg>
+                        Local File Path
+                    </button>
+                </div>
+                
+                <h2 class="text-xs uppercase tracking-wider text-gray-500 mt-8 mb-4">Navigation</h2>
+                <div class="space-y-2">
+                    <a href="/dashboard" class="sidebar-item block">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="sidebar-item-icon text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                        </svg>
+                        All Transcripts
+                    </a>
+                    <a href="/" class="sidebar-item block">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="sidebar-item-icon text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        New Transcription
+                    </a>
+                </div>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Header -->
+            <header class="h-16 border-b border-gray-800 flex items-center justify-between px-6 glass-effect">
+                <h2 class="text-xl font-medium">New Transcription</h2>
+                <div>
+                    <a href="/index.html" class="text-accent-300 hover:text-accent-200 text-sm">
+                        <span>Switch to Classic UI</span>
+                    </a>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <main class="flex-1 overflow-y-auto p-6">
+                <!-- Upload Panel -->
+                <div id="upload-panel" class="space-y-6">
+                    <div class="card">
+                        <div id="dropzone" class="dropzone">
+                            <div id="dropzone-text">
+                                <div class="relative mx-auto w-16 h-16 mb-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="absolute inset-0 h-16 w-16 text-accent-400 animate-pulse-slow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                    </svg>
+                                </div>
+                                <p class="text-lg font-medium">Drag and drop video or audio files here</p>
+                                <p class="text-sm text-gray-400 mt-2">or click to select files</p>
+                            </div>
+                            <div id="file-list" class="hidden mt-4">
+                                <ul id="selected-files" class="space-y-2 max-h-40 overflow-y-auto"></ul>
+                            </div>
+                            <input type="file" id="file-input" class="hidden" multiple accept="video/*,audio/*">
+                        </div>
+                        
+                        <!-- File List with Individual Metadata Fields -->
+                        <div id="advanced-file-list" class="hidden space-y-4 mt-6">
+                          <h3 class="text-md font-medium text-accent-300 mb-2">Selected Files</h3>
+                          
+                          <!-- Individual file items will be added here -->
+                          <div id="file-items-container" class="space-y-4">
+                            <!-- File items will be dynamically added here -->
+                          </div>
+                        </div>
+                    </div>
+                    
+                    <div id="youtube-panel" class="hidden card">
+                        <h3 class="text-lg font-medium mb-4">YouTube Video</h3>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-400 mb-1" for="youtube-url">YouTube URL</label>
+                            <input type="text" id="youtube-url" placeholder="https://www.youtube.com/watch?v=..." class="input-field">
+                            <p class="text-sm text-gray-500 mt-1">Paste a YouTube URL to download and transcribe</p>
+                        </div>
+                        
+                        <div id="youtube-preview" class="hidden mb-4 bg-dark-900 rounded-lg p-4 border border-gray-800">
+                            <div class="flex items-center">
+                                <div id="youtube-thumbnail" class="w-32 h-20 bg-gray-800 rounded mr-4 flex-shrink-0 overflow-hidden">
+                                    <!-- Thumbnail will be inserted here -->
+                                </div>
+                                <div>
+                                    <h4 id="youtube-title" class="font-medium">Video title</h4>
+                                    <p id="youtube-info" class="text-sm text-gray-400">Channel • Duration</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="path-panel" class="hidden card">
+                        <h3 class="text-lg font-medium mb-4">Local File Path</h3>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-400 mb-1" for="file-path">Full File Path</label>
+                            <input type="text" id="file-path" placeholder="/path/to/your/video.mp4" class="input-field">
+                            <p class="text-sm text-gray-500 mt-1">Enter the absolute path to a video or audio file on your system</p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3 class="text-lg font-medium mb-4">Transcription Options</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-400 mb-1" for="title">Title (Optional)</label>
+                                <input type="text" id="title" class="input-field">
+                                <p class="text-sm text-gray-500 mt-1">Used for single file or YouTube transcription</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-400 mb-1" for="topic">Topic (Optional)</label>
+                                <input type="text" id="topic" class="input-field">
+                                <p class="text-sm text-gray-500 mt-1">Used for categorizing your transcripts</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-center">
+                            <button id="transcribe-btn" class="btn-primary">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                </svg>
+                                Transcribe Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Progress Panel -->
+                <div id="progress-section" class="hidden space-y-6">
+                    <div class="card">
+                        <h3 class="text-xl font-semibold mb-6">Transcription in Progress</h3>
+                        <div class="space-y-6" id="progress-container">
+                            <!-- Progress bars will be added here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Results Panel -->
+                <div id="results-section" class="hidden space-y-6">
+                    <div class="card">
+                        <h3 class="text-xl font-semibold mb-6">Transcription Results</h3>
+                        <div class="space-y-6" id="results-container">
+                            <!-- Results will be added here -->
+                        </div>
+                        <div class="mt-8 flex space-x-4 justify-center">
+                            <a href="/dashboard" class="btn-primary">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                </svg>
+                                View All Transcripts
+                            </a>
+                            <button onclick="location.reload()" class="btn-secondary">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                </svg>
+                                New Transcription
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab switching
+            const uploadTab = document.getElementById('upload-tab');
+            const youtubeTab = document.getElementById('youtube-tab');
+            const pathTab = document.getElementById('path-tab');
+            const uploadPanel = document.getElementById('upload-panel');
+            const youtubePanel = document.getElementById('youtube-panel');
+            const pathPanel = document.getElementById('path-panel');
+            
+            // YouTube elements
+            const youtubeUrl = document.getElementById('youtube-url');
+            const filePathInput = document.getElementById('file-path');
+            const youtubePreview = document.getElementById('youtube-preview');
+            const youtubeThumbnail = document.getElementById('youtube-thumbnail');
+            const youtubeTitle = document.getElementById('youtube-title');
+            const youtubeInfo = document.getElementById('youtube-info');
+            
+            // File upload elements
+            const dropzone = document.getElementById('dropzone');
+            const fileInput = document.getElementById('file-input');
+            const fileList = document.getElementById('file-list');
+            const selectedFiles = document.getElementById('selected-files');
+            const dropzoneText = document.getElementById('dropzone-text');
+            const transcribeBtn = document.getElementById('transcribe-btn');
+            const progressSection = document.getElementById('progress-section');
+            const progressContainer = document.getElementById('progress-container');
+            const resultsSection = document.getElementById('results-section');
+            const resultsContainer = document.getElementById('results-container');
+            
+            // Advanced file list elements for multiple video metadata
+            const advancedFileList = document.getElementById('advanced-file-list');
+            const fileItemsContainer = document.getElementById('file-items-container');
+            
+            let files = [];
+            let youtubeVideoId = null;
+            let filePath = null;
+            let currentMode = 'upload'; // 'upload', 'youtube', or 'path'
+            
+            function activateTab(tab) {
+                // Remove active class from all tabs
+                [uploadTab, youtubeTab, pathTab].forEach(t => {
+                    t.classList.remove('active');
+                });
+                // Add active class to selected tab
+                tab.classList.add('active');
+            }
+            
+            // Tab switching logic
+            uploadTab.addEventListener('click', function() {
+                activateTab(this);
+                uploadPanel.style.display = 'block';
+                youtubePanel.style.display = 'none';
+                pathPanel.style.display = 'none';
+                currentMode = 'upload';
+                updateTranscribeButtonState();
+            });
+            
+            youtubeTab.addEventListener('click', function() {
+                activateTab(this);
+                uploadPanel.style.display = 'none';
+                youtubePanel.style.display = 'block';
+                pathPanel.style.display = 'none';
+                currentMode = 'youtube';
+                updateTranscribeButtonState();
+            });
+            
+            pathTab.addEventListener('click', function() {
+                activateTab(this);
+                uploadPanel.style.display = 'none';
+                youtubePanel.style.display = 'none';
+                pathPanel.style.display = 'block';
+                currentMode = 'path';
+                updateTranscribeButtonState();
+            });
+            
+            // Initialize validateUrlInput
+            function updateTranscribeButtonState() {
+                if (currentMode === 'upload') {
+                    transcribeBtn.disabled = files.length === 0;
+                } else if (currentMode === 'youtube') {
+                    transcribeBtn.disabled = !youtubeVideoId;
+                } else if (currentMode === 'path') {
+                    transcribeBtn.disabled = !filePath;
+                }
+            }
+            
+            // YouTube URL handling
+            let youtubeTimeout;
+            youtubeUrl.addEventListener('input', function() {
+                clearTimeout(youtubeTimeout);
+                youtubeTimeout = setTimeout(function() {
+                    validateYoutubeUrl();
+                }, 500);
+            });
+            
+            // File path handling
+            let pathTimeout;
+            filePathInput.addEventListener('input', function() {
+                clearTimeout(pathTimeout);
+                pathTimeout = setTimeout(function() {
+                    validateFilePath();
+                }, 500);
+            });
+            
+            function validateYoutubeUrl() {
+                const url = youtubeUrl.value.trim();
+                youtubePreview.style.display = 'none';
+                
+                if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                    const videoId = extractYouTubeId(url);
+                    if (videoId) {
+                        youtubeVideoId = videoId;
+                        
+                        // Show preview with thumbnail
+                        youtubeThumbnail.innerHTML = `<img src="https://img.youtube.com/vi/${videoId}/mqdefault.jpg" class="w-full h-full object-cover">`;
+                        
+                        // Get video information
+                        youtubeTitle.textContent = "YouTube Video";
+                        youtubeInfo.textContent = "URL: " + url;
+                        
+                        youtubePreview.style.display = 'block';
+                        updateTranscribeButtonState();
+                        return;
+                    }
+                }
+                youtubeVideoId = null;
+                updateTranscribeButtonState();
+            }
+            
+            function validateFilePath() {
+                const path = filePathInput.value.trim();
+                
+                if (path && path.trim() !== '') {
+                    filePath = path;
+                    updateTranscribeButtonState();
+                    return;
+                }
+                filePath = null;
+                updateTranscribeButtonState();
+            }
+            
+            function extractYouTubeId(url) {
+                // Handle youtu.be URLs
+                if (url.includes('youtu.be')) {
+                    const parts = url.split('/');
+                    return parts[parts.length - 1].split('?')[0];
+                }
+                // Handle youtube.com URLs
+                else if (url.includes('youtube.com')) {
+                    try {
+                        // Try to extract v parameter using URLSearchParams
+                        const searchParams = new URL(url).searchParams;
+                        return searchParams.get('v');
+                    } catch (e) {
+                        // Fallback to regex extraction
+                        const match = /[?&]v=([^&#]*)/.exec(url);
+                        return match ? match[1] : null;
+                    }
+                }
+                return null;
+            }
+            
+            // Dropzone functionality
+            dropzone.addEventListener('click', () => fileInput.click());
+            
+            dropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropzone.classList.add('active');
+            });
+            
+            dropzone.addEventListener('dragleave', () => {
+                dropzone.classList.remove('active');
+            });
+            
+            dropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('active');
+                
+                if (e.dataTransfer.files.length > 0) {
+                    handleFiles(e.dataTransfer.files);
+                }
+            });
+            
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length > 0) {
+                    handleFiles(fileInput.files);
+                }
+            });
+            
+            function handleFiles(fileList) {
+                files = Array.from(fileList).filter(file => file.type.startsWith('video/') || file.type.startsWith('audio/'));
+                
+                if (files.length === 0) {
+                    alert('Please select video or audio files only.');
+                    return;
+                }
+                
+                updateFileList();
+                updateAdvancedFileList(files);
+            }
+            
+            function updateFileList() {
+                selectedFiles.innerHTML = '';
+                
+                files.forEach((file, index) => {
+                    const item = document.createElement('li');
+                    item.className = 'flex justify-between items-center p-3 rounded-lg bg-dark-900 border border-gray-800';
+                    
+                    const fileInfo = document.createElement('div');
+                    fileInfo.className = 'flex items-center';
+                    
+                    const icon = document.createElement('div');
+                    icon.className = 'text-accent-400 mr-3';
+                    
+                    if (file.type.startsWith('video/')) {
+                        icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>';
+                    } else {
+                        icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>';
+                    }
+                    
+                    const name = document.createElement('span');
+                    name.className = 'text-sm font-medium';
+                    name.textContent = file.name;
+                    
+                    const size = document.createElement('span');
+                    size.className = 'text-xs text-gray-400 ml-2';
+                    size.textContent = formatFileSize(file.size);
+                    
+                    fileInfo.appendChild(icon);
+                    fileInfo.appendChild(name);
+                    fileInfo.appendChild(size);
+                    
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'text-gray-400 hover:text-gray-300';
+                    removeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>';
+                    removeBtn.addEventListener('click', () => {
+                        files.splice(index, 1);
+                        updateFileList();
+                        updateAdvancedFileList(files);
+                    });
+                    
+                    item.appendChild(fileInfo);
+                    item.appendChild(removeBtn);
+                    selectedFiles.appendChild(item);
+                });
+                
+                if (files.length > 0) {
+                    dropzoneText.style.display = 'none';
+                    fileList.style.display = 'block';
+                    transcribeBtn.disabled = false;
+                } else {
+                    dropzoneText.style.display = 'block';
+                    fileList.style.display = 'none';
+                    transcribeBtn.disabled = true;
+                }
+            }
+            
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+            
+            // Function to update the file list with metadata fields for each file
+            function updateAdvancedFileList(files) {
+                const container = fileItemsContainer;
+                
+                // Clear existing items
+                container.innerHTML = '';
+                
+                if (files.length === 0) {
+                    advancedFileList.classList.add('hidden');
+                    return;
+                }
+                
+                // Show the advanced file list
+                advancedFileList.classList.remove('hidden');
+                
+                // Add a file item for each file
+                files.forEach((file, index) => {
+                    // Create a container for this file item
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item bg-dark-900/60 rounded-lg p-4 border border-gray-800 transition duration-200';
+                    fileItem.setAttribute('data-index', index);
+                    
+                    // Determine icon based on file type
+                    let iconSvg;
+                    if (file.type.startsWith('video/')) {
+                        iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>';
+                    } else {
+                        iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>';
+                    }
+                    
+                    // Format file size
+                    const fileSize = formatFileSize(file.size);
+                    
+                    // Create the file item content
+                    fileItem.innerHTML = `
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="flex items-center">
+                                <div class="text-accent-400 mr-3">
+                                    ${iconSvg}
+                                </div>
+                                <div>
+                                    <div class="font-medium">${file.name}</div>
+                                    <div class="text-xs text-gray-400">${fileSize}</div>
+                                </div>
+                            </div>
+                            <button class="text-gray-400 hover:text-gray-300 remove-file-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-400 mb-1">Title</label>
+                                <input type="text" 
+                                    class="file-title input-field" 
+                                    placeholder="Enter title"
+                                    value="${file.name.split('.').slice(0, -1).join('.')}">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-400 mb-1">Topic</label>
+                                <input type="text" 
+                                    class="file-topic input-field" 
+                                    placeholder="Enter topic">
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Add the file item to the container
+                    container.appendChild(fileItem);
+                    
+                    // Add an event listener to the remove button
+                    const removeBtn = fileItem.querySelector('.remove-file-btn');
+                    removeBtn.addEventListener('click', () => {
+                        removeFile(index);
+                    });
+                });
+            }
+            
+            // Function to remove a file from the list
+            function removeFile(index) {
+                files.splice(index, 1);
+                updateFileList();
+                updateAdvancedFileList(files);
+                updateTranscribeButtonState();
+            }
+            
+            // When creating FormData for submission, collect all metadata
+            function createFormDataWithMetadata() {
+                const formData = new FormData();
+                
+                // Get all file items
+                const fileItems = document.querySelectorAll('.file-item');
+                
+                fileItems.forEach((fileItem, index) => {
+                    const fileIndex = parseInt(fileItem.getAttribute('data-index'));
+                    const file = files[fileIndex];
+                    
+                    // Get the title and topic for this file
+                    const title = fileItem.querySelector('.file-title').value;
+                    const topic = fileItem.querySelector('.file-topic').value;
+                    
+                    // Add file with a unique name to identify it on the server
+                    formData.append(`file_${index}`, file);
+                    
+                    // Add the metadata for this file
+                    if (title) formData.append(`title_${index}`, title);
+                    if (topic) formData.append(`topic_${index}`, topic);
+                });
+                
+                // Add the total count of files
+                formData.append('file_count', fileItems.length);
+                
+                return formData;
+            }
+            
+            // Initialize the UI on page load
+            updateTranscribeButtonState();
+            
+            // Transcribe functionality
+            transcribeBtn.addEventListener('click', function() {
+                if (currentMode === 'upload' && files.length === 0) return;
+                if (currentMode === 'youtube' && !youtubeVideoId) return;
+                if (currentMode === 'path' && !filePath) return;
+                
+                // Show progress section
+                uploadPanel.style.display = 'none';
+                progressSection.style.display = 'block';
+                resultsSection.style.display = 'none';
+                progressContainer.innerHTML = '';
+                
+                // Create FormData - for multiple files with metadata
+                let formData;
+                
+                // For upload mode with multiple files, use the advanced form data with per-file metadata
+                if (currentMode === 'upload' && files.length > 0) {
+                    formData = createFormDataWithMetadata();
+                } else {
+                    // For other modes, use the standard form data
+                    formData = new FormData();
+                    
+                    // Add metadata from the main form
+                    const title = document.getElementById('title').value;
+                    const topic = document.getElementById('topic').value;
+                    
+                    if (title) formData.append('title', title);
+                    if (topic) formData.append('topic', topic);
+                    
+                    if (currentMode === 'youtube') {
+                        formData.append('youtube_url', youtubeUrl.value.trim());
+                    } else if (currentMode === 'path') {
+                        formData.append('file_path', filePathInput.value.trim());
+                    }
+                }
+                
+                // Disable transcribe button
+                transcribeBtn.disabled = true;
+                
+                let simulateProgress = {};
+                
+                if (currentMode === 'upload') {
+                    // Create progress bars for each file
+                    files.forEach(file => {
+                        createProgressItem(file.name, progressContainer);
+                    });
+                    
+                    // Setup progress simulation
+                    const fileNames = files.map(f => f.name);
+                    simulateProgress = setupProgressSimulation(fileNames);
+                    
+                } else if (currentMode === 'youtube') {
+                    // For YouTube mode
+                    createProgressItem('YouTube Video', progressContainer);
+                    simulateProgress = setupProgressSimulation(['YouTube Video']);
+                    
+                } else if (currentMode === 'path') {
+                    // For File Path mode
+                    const filename = filePathInput.value.trim().split('/').pop();
+                    createProgressItem(filename || 'Local File', progressContainer);
+                    simulateProgress = setupProgressSimulation([filename || 'Local File']);
+                }
+                
+                // Submit to server
+                fetch('/transcribe', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Stop progress simulation
+                    Object.values(simulateProgress).forEach(item => clearInterval(item.interval));
+                    
+                    // Complete all progress bars
+                    progressContainer.querySelectorAll('[data-file]').forEach(item => {
+                        const progressBarInner = item.querySelector('.bg-accent-500');
+                        const progressText = item.querySelector('.text-gray-400');
+                        
+                        progressBarInner.style.width = '100%';
+                        progressText.textContent = '100%';
+                    });
+                    
+                    // Show results
+                    setTimeout(() => {
+                        progressSection.style.display = 'none';
+                        resultsSection.style.display = 'block';
+                        
+                        resultsContainer.innerHTML = '';
+                        
+                        data.forEach(result => {
+                            const resultItem = document.createElement('div');
+                            resultItem.className = 'bg-dark-900 rounded-lg p-4 border border-gray-800';
+                            
+                            if (result.success) {
+                                resultItem.innerHTML = `
+                                    <div class="flex items-center mb-3">
+                                        <div class="text-green-500 mr-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                            </svg>
+                                        </div>
+                                        <h3 class="text-lg font-medium">${result.title}</h3>
+                                    </div>
+                                    <div class="flex space-x-3 mt-4">
+                                        <a href="/transcript/${result.id}" class="btn-primary py-2">View Transcript</a>
+                                        <a href="/download/${result.id}" class="btn-secondary">Download</a>
+                                    </div>
+                                `;
+                            } else {
+                                resultItem.innerHTML = `
+                                    <div class="flex items-center mb-3">
+                                        <div class="text-red-500 mr-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                            </svg>
+                                        </div>
+                                        <h3 class="text-lg font-medium">${result.filename}</h3>
+                                    </div>
+                                    <p class="text-red-400 text-sm">${result.error}</p>
+                                `;
+                            }
+                            
+                            resultsContainer.appendChild(resultItem);
+                        });
+                        
+                        // Reset files and form
+                        files = [];
+                        updateFileList();
+                        document.getElementById('title').value = '';
+                        document.getElementById('topic').value = '';
+                        transcribeBtn.disabled = false;
+                    }, 1000);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred during transcription. Please try again.');
+                    
+                    // Reset progress
+                    Object.values(simulateProgress).forEach(item => clearInterval(item.interval));
+                    transcribeBtn.disabled = false;
+                });
+            });
+            
+            function createProgressItem(fileName, container) {
+                const progressItem = document.createElement('div');
+                progressItem.className = 'flex flex-col mb-4';
+                progressItem.setAttribute('data-file', fileName);
+                
+                const fileInfo = document.createElement('div');
+                fileInfo.className = 'flex justify-between mb-1';
+                
+                const fileNameEl = document.createElement('span');
+                fileNameEl.className = 'text-sm font-medium text-gray-300';
+                fileNameEl.textContent = fileName;
+                
+                const progressText = document.createElement('span');
+                progressText.className = 'text-sm text-gray-400';
+                progressText.textContent = '0%';
+                
+                fileInfo.appendChild(fileNameEl);
+                fileInfo.appendChild(progressText);
+                
+                const progressBar = document.createElement('div');
+                progressBar.className = 'w-full bg-gray-700 rounded-full h-2.5';
+                
+                const progressBarInner = document.createElement('div');
+                progressBarInner.className = 'bg-accent-500 h-2.5 rounded-full';
+                progressBarInner.style.width = '0%';
+                
+                progressBar.appendChild(progressBarInner);
+                
+                progressItem.appendChild(fileInfo);
+                progressItem.appendChild(progressBar);
+                
+                container.appendChild(progressItem);
+            }
+            
+            function setupProgressSimulation(itemNames) {
+                const simulateProgress = {};
+                
+                itemNames.forEach(name => {
+                    simulateProgress[name] = {
+                        interval: setInterval(() => {
+                            const progressItem = progressContainer.querySelector(`[data-file="${name}"]`);
+                            if (!progressItem) return;
+                            
+                            const progressBarInner = progressItem.querySelector('.bg-accent-500');
+                            const progressText = progressItem.querySelector('.text-gray-400');
+                            
+                            // Get current progress
+                            const currentProgress = parseInt(progressBarInner.style.width) || 0;
+                            
+                            // Simulate progress that slows down near completion
+                            let increment = 5;
+                            if (currentProgress > 70) increment = 2;
+                            if (currentProgress > 90) increment = 0.5;
+                            
+                            const newProgress = Math.min(99, currentProgress + increment);
+                            
+                            // Update progress
+                            progressBarInner.style.width = `${newProgress}%`;
+                            progressText.textContent = `${Math.round(newProgress)}%`;
+                        }, 300)
+                    };
+                });
+                
+                return simulateProgress;
+            }
+        });
+    </script>
+</body>
+</html>
