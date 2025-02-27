@@ -133,17 +133,6 @@ def search_transcripts():
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe():
-    """
-    Enhanced transcribe endpoint that handles multiple files with individual metadata.
-    
-    For each file, it expects:
-    - file_0, file_1, file_2, etc.
-    - title_0, title_1, title_2, etc. (optional)
-    - topic_0, topic_1, topic_2, etc. (optional)
-    - file_count: total number of files
-    
-    It also handles YouTube URL and file path inputs as before.
-    """
     # Clean upload folder
     for filename in os.listdir(app.config['UPLOAD_FOLDER']):
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -268,71 +257,7 @@ def transcribe():
                 'error': str(e)
             })
             
-    # Check if the post request has multiple files with per-file metadata
-    elif 'file_count' in request.form:
-        file_count = int(request.form.get('file_count', 0))
-        
-        for i in range(file_count):
-            file_key = f'file_{i}'
-            title_key = f'title_{i}'
-            topic_key = f'topic_{i}'
-            
-            if file_key not in request.files:
-                continue
-                
-            file = request.files[file_key]
-            if file.filename == '':
-                continue
-                
-            # Get metadata for this specific file
-            title = request.form.get(title_key, file.filename)
-            topic = request.form.get(topic_key, '')
-            
-            # Generate unique filename
-            original_filename = secure_filename(file.filename)
-            file_id = str(uuid.uuid4())
-            extension = os.path.splitext(original_filename)[1]
-            filename = f"{file_id}{extension}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            
-            # Save the file
-            file.save(filepath)
-            
-            # Process with Whisper
-            try:
-                model = get_model()
-                result = model.transcribe(filepath)
-                
-                # Save transcript as JSON with metadata
-                transcript_data = {
-                    'id': file_id,
-                    'title': title,
-                    'topic': topic,
-                    'original_filename': original_filename,
-                    'date': datetime.now().isoformat(),
-                    'filepath': filepath,
-                    'transcript': result['text'],
-                    'segments': result['segments']
-                }
-                
-                transcript_path = os.path.join(app.config['TRANSCRIPT_FOLDER'], f"{file_id}.json")
-                with open(transcript_path, 'w') as f:
-                    json.dump(transcript_data, f)
-                
-                results.append({
-                    'id': file_id,
-                    'title': title,
-                    'success': True
-                })
-                
-            except Exception as e:
-                results.append({
-                    'filename': original_filename,
-                    'success': False,
-                    'error': str(e)
-                })
-    
-    # Fallback to the standard file upload format
+    # Check if the post request has file uploads
     elif 'file' in request.files:
         files = request.files.getlist('file')
         
@@ -355,7 +280,7 @@ def transcribe():
                 title = request.form.get('title', original_filename)
                 topic = request.form.get('topic', '')
                 
-                # Process with Whisper
+                # Process with Whisper (in a real app, would use Celery for background processing)
                 try:
                     model = get_model()
                     result = model.transcribe(filepath)

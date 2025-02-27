@@ -64,10 +64,10 @@
                     <h3 class="text-lg font-medium mb-2">Choose your source</h3>
                     
                     <div class="flex mb-4">
-                        <button id="upload-tab" onclick="switchTab('upload')" class="flex-1 py-2 border-b-2 border-primary-500 text-primary-400 font-medium">
+                        <button id="upload-tab" class="flex-1 py-2 border-b-2 border-primary-500 text-primary-400 font-medium">
                             Upload Files
                         </button>
-                        <button id="youtube-tab" onclick="switchTab('youtube')" class="flex-1 py-2 border-b-2 border-gray-700 text-gray-400 font-medium">
+                        <button id="youtube-tab" class="flex-1 py-2 border-b-2 border-gray-700 text-gray-400 font-medium">
                             URL or Path
                         </button>
                     </div>
@@ -158,27 +158,6 @@
     </div>
 
     <script>
-        // Tab switching function
-        function switchTab(tabName) {
-            if (tabName === 'upload') {
-                document.getElementById('youtube-panel').classList.add('hidden');
-                document.getElementById('upload-panel').classList.remove('hidden');
-                document.getElementById('upload-tab').classList.add('border-primary-500', 'text-primary-400');
-                document.getElementById('upload-tab').classList.remove('border-gray-700', 'text-gray-400');
-                document.getElementById('youtube-tab').classList.add('border-gray-700', 'text-gray-400');
-                document.getElementById('youtube-tab').classList.remove('border-primary-500', 'text-primary-400');
-                window.currentMode = 'upload';
-            } else if (tabName === 'youtube') {
-                document.getElementById('upload-panel').classList.add('hidden');
-                document.getElementById('youtube-panel').classList.remove('hidden');
-                document.getElementById('youtube-tab').classList.add('border-primary-500', 'text-primary-400');
-                document.getElementById('youtube-tab').classList.remove('border-gray-700', 'text-gray-400');
-                document.getElementById('upload-tab').classList.add('border-gray-700', 'text-gray-400');
-                document.getElementById('upload-tab').classList.remove('border-primary-500', 'text-primary-400');
-                window.currentMode = 'youtube';
-            }
-        }
-        
         document.addEventListener('DOMContentLoaded', function() {
             // Tab switching
             const uploadTab = document.getElementById('upload-tab');
