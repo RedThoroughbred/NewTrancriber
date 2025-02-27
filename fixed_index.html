@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Transcription App</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        dark: {
+                            800: '#1f2937',
+                            900: '#111827',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .dropzone {
+                @apply border-2 border-dashed border-primary-300 rounded-lg p-12 text-center cursor-pointer hover:bg-dark-800 transition duration-300;
+            }
+            .dropzone.active {
+                @apply border-primary-500 bg-dark-800;
+            }
+        }
+    </style>
+</head>
+<body class="bg-dark-900 text-white min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="flex justify-between items-center mb-12">
+            <h1 class="text-3xl font-bold text-primary-400">Video Transcriber</h1>
+            <nav>
+                <a href="/dashboard" class="text-primary-300 hover:text-primary-400 transition">Dashboard</a>
+            </nav>
+        </header>
+
+        <main class="max-w-4xl mx-auto">
+            <section class="mb-12 text-center">
+                <h2 class="text-2xl font-semibold mb-4">Transform Video to Text with Precision</h2>
+                <p class="text-gray-400 mb-8">Upload your videos and get accurate transcriptions powered by Whisper AI</p>
+            </section>
+
+            <section class="bg-dark-800 rounded-xl p-8 shadow-lg mb-12">
+                <div class="bg-dark-900 rounded-lg p-4 mb-6 border border-gray-700">
+                    <h3 class="text-lg font-medium mb-2">Choose your source</h3>
+                    
+                    <div class="flex mb-4">
+                        <button id="upload-tab" class="flex-1 py-2 border-b-2 border-primary-500 text-primary-400 font-medium">
+                            Upload Files
+                        </button>
+                        <button id="youtube-tab" class="flex-1 py-2 border-b-2 border-gray-700 text-gray-400 font-medium">
+                            URL or Path
+                        </button>
+                    </div>
+                    
+                    <div id="upload-panel">
+                        <div id="dropzone" class="dropzone">
+                            <div id="dropzone-text">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                                <p class="text-lg font-medium">Drag and drop video files here</p>
+                                <p class="text-sm text-gray-400 mt-2">or click to select files</p>
+                            </div>
+                            <div id="file-list" class="hidden mt-4">
+                                <ul id="selected-files" class="divide-y divide-gray-700"></ul>
+                            </div>
+                            <input type="file" id="file-input" class="hidden" multiple accept="video/*,audio/*">
+                        </div>
+                    </div>
+                    
+                    <div id="youtube-panel" class="hidden">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-400 mb-1" for="youtube-url">Video URL or File Path</label>
+                            <input type="text" id="youtube-url" placeholder="https://www.youtube.com/watch?v=... or /path/to/video.mp4" class="w-full bg-dark-800 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                            <p class="text-sm text-gray-500 mt-1">Paste a YouTube URL or enter a file path to transcribe</p>
+                        </div>
+                        <div class="mb-4">
+                            <div class="flex items-center">
+                                <input type="radio" id="url-type-youtube" name="url-type" value="youtube" class="mr-2" checked>
+                                <label for="url-type-youtube" class="text-sm text-gray-400 mr-4">YouTube URL</label>
+                                
+                                <input type="radio" id="url-type-file" name="url-type" value="file" class="mr-2">
+                                <label for="url-type-file" class="text-sm text-gray-400">Local File Path</label>
+                            </div>
+                        </div>
+                        
+                        <div id="youtube-preview" class="hidden mb-4 bg-dark-800 rounded-lg p-4 border border-gray-700">
+                            <div class="flex items-center">
+                                <div id="youtube-thumbnail" class="w-24 h-16 bg-gray-700 rounded mr-4 flex-shrink-0 overflow-hidden">
+                                    <!-- Thumbnail will be inserted here -->
+                                </div>
+                                <div>
+                                    <h4 id="youtube-title" class="font-medium">Video title</h4>
+                                    <p id="youtube-info" class="text-sm text-gray-400">Channel • Duration</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-400 mb-1" for="title">Title (Optional)</label>
+                            <input type="text" id="title" class="w-full bg-dark-900 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-400 mb-1" for="topic">Topic (Optional)</label>
+                            <input type="text" id="topic" class="w-full bg-dark-900 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-center">
+                    <button id="transcribe-btn" class="bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-8 rounded-lg transition transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Transcribe Now
+                    </button>
+                </div>
+            </section>
+
+            <section id="progress-section" class="hidden bg-dark-800 rounded-xl p-8 shadow-lg mb-12">
+                <h3 class="text-xl font-semibold mb-4">Transcription in Progress</h3>
+                <div class="space-y-6" id="progress-container">
+                    <!-- Progress bars will be added here -->
+                </div>
+            </section>
+
+            <section id="results-section" class="hidden bg-dark-800 rounded-xl p-8 shadow-lg">
+                <h3 class="text-xl font-semibold mb-4">Transcription Results</h3>
+                <div class="space-y-6" id="results-container">
+                    <!-- Results will be added here -->
+                </div>
+                <div class="mt-8 text-center">
+                    <a href="/dashboard" class="text-primary-400 hover:text-primary-300 font-medium">View All Transcripts</a>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab switching
+            const uploadTab = document.getElementById('upload-tab');
+            const youtubeTab = document.getElementById('youtube-tab');
+            const uploadPanel = document.getElementById('upload-panel');
+            const youtubePanel = document.getElementById('youtube-panel');
+            
+            // YouTube elements
+            const youtubeUrl = document.getElementById('youtube-url');
+            const youtubePreview = document.getElementById('youtube-preview');
+            const youtubeThumbnail = document.getElementById('youtube-thumbnail');
+            const youtubeTitle = document.getElementById('youtube-title');
+            const youtubeInfo = document.getElementById('youtube-info');
+            
+            // File upload elements
+            const dropzone = document.getElementById('dropzone');
+            const fileInput = document.getElementById('file-input');
+            const fileList = document.getElementById('file-list');
+            const selectedFiles = document.getElementById('selected-files');
+            const dropzoneText = document.getElementById('dropzone-text');
+            const transcribeBtn = document.getElementById('transcribe-btn');
+            const progressSection = document.getElementById('progress-section');
+            const progressContainer = document.getElementById('progress-container');
+            const resultsSection = document.getElementById('results-section');
+            const resultsContainer = document.getElementById('results-container');
+            
+            let files = [];
+            let youtubeVideoId = null;
+            let currentMode = 'upload'; // 'upload' or 'youtube'
+            
+            // Tab switching logic
+            uploadTab.addEventListener('click', function() {
+                uploadTab.classList.add('border-primary-500', 'text-primary-400');
+                uploadTab.classList.remove('border-gray-700', 'text-gray-400');
+                youtubeTab.classList.add('border-gray-700', 'text-gray-400');
+                youtubeTab.classList.remove('border-primary-500', 'text-primary-400');
+                
+                uploadPanel.classList.remove('hidden');
+                youtubePanel.classList.add('hidden');
+                
+                currentMode = 'upload';
+                updateTranscribeButtonState();
+            });
+            
+            youtubeTab.addEventListener('click', function() {
+                youtubeTab.classList.add('border-primary-500', 'text-primary-400');
+                youtubeTab.classList.remove('border-gray-700', 'text-gray-400');
+                uploadTab.classList.add('border-gray-700', 'text-gray-400');
+                uploadTab.classList.remove('border-primary-500', 'text-primary-400');
+                
+                youtubePanel.classList.remove('hidden');
+                uploadPanel.classList.add('hidden');
+                
+                currentMode = 'youtube';
+                updateTranscribeButtonState();
+            });
+            
+            // Initialize validateUrlInput
+            function updateTranscribeButtonState() {
+                if (currentMode === 'upload') {
+                    transcribeBtn.disabled = files.length === 0;
+                } else {
+                    transcribeBtn.disabled = !youtubeVideoId;
+                }
+            }
+            
+            // YouTube URL handling
+            let youtubeTimeout;
+            const urlTypeRadios = document.querySelectorAll('input[name="url-type"]');
+            
+            // Add event listeners to radio buttons
+            urlTypeRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    validateUrlInput();
+                });
+            });
+            
+            youtubeUrl.addEventListener('input', function() {
+                clearTimeout(youtubeTimeout);
+                youtubeTimeout = setTimeout(function() {
+                    validateUrlInput();
+                }, 500);
+            });
+            
+            function validateUrlInput() {
+                const url = youtubeUrl.value.trim();
+                const urlType = document.querySelector('input[name="url-type"]:checked').value;
+                
+                youtubePreview.classList.add('hidden');
+                
+                if (urlType === 'youtube') {
+                    // YouTube URL validation
+                    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                        const videoId = extractYouTubeId(url);
+                        if (videoId) {
+                            youtubeVideoId = videoId;
+                            
+                            // Show preview with thumbnail
+                            youtubeThumbnail.innerHTML = `<img src="https://img.youtube.com/vi/${videoId}/mqdefault.jpg" class="w-full h-full object-cover">`;
+                            
+                            // Get video information
+                            youtubeTitle.textContent = "YouTube Video";
+                            youtubeInfo.textContent = "URL: " + url;
+                            
+                            youtubePreview.classList.remove('hidden');
+                            updateTranscribeButtonState();
+                            return;
+                        }
+                    }
+                    youtubeVideoId = null;
+                    updateTranscribeButtonState();
+                } else {
+                    // File path validation
+                    if (url && url.trim() !== '') {
+                        // Basic validation - just check if it's not empty
+                        youtubeVideoId = 'valid'; // Use this as a flag that we have valid input
+                        
+                        // Show file path preview
+                        youtubeThumbnail.innerHTML = `
+                            <div class="flex items-center justify-center w-full h-full bg-dark-900">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                        `;
+                        
+                        youtubeTitle.textContent = "Local Video File";
+                        youtubeInfo.textContent = "Path: " + url;
+                        
+                        youtubePreview.classList.remove('hidden');
+                        updateTranscribeButtonState();
+                        return;
+                    }
+                    youtubeVideoId = null;
+                    updateTranscribeButtonState();
+                }
+            }
+            
+            function extractYouTubeId(url) {
+                // Handle youtu.be URLs
+                if (url.includes('youtu.be')) {
+                    const parts = url.split('/');
+                    return parts[parts.length - 1].split('?')[0];
+                }
+                // Handle youtube.com URLs
+                else if (url.includes('youtube.com')) {
+                    try {
+                        // Try to extract v parameter using URLSearchParams
+                        const searchParams = new URL(url).searchParams;
+                        return searchParams.get('v');
+                    } catch (e) {
+                        // Fallback to regex extraction
+                        const match = /[?&]v=([^&#]*)/.exec(url);
+                        return match ? match[1] : null;
+                    }
+                }
+                return null;
+            }
+            
+            // Dropzone functionality
+            dropzone.addEventListener('click', () => fileInput.click());
+            
+            dropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropzone.classList.add('active');
+            });
+            
+            dropzone.addEventListener('dragleave', () => {
+                dropzone.classList.remove('active');
+            });
+            
+            dropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('active');
+                
+                if (e.dataTransfer.files.length > 0) {
+                    handleFiles(e.dataTransfer.files);
+                }
+            });
+            
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length > 0) {
+                    handleFiles(fileInput.files);
+                }
+            });
+            
+            function handleFiles(fileList) {
+                files = Array.from(fileList).filter(file => file.type.startsWith('video/') || file.type.startsWith('audio/'));
+                
+                if (files.length === 0) {
+                    alert('Please select video or audio files only.');
+                    return;
+                }
+                
+                updateFileList();
+            }
+            
+            function updateFileList() {
+                selectedFiles.innerHTML = '';
+                
+                files.forEach((file, index) => {
+                    const item = document.createElement('li');
+                    item.className = 'py-3 flex justify-between items-center';
+                    
+                    const fileInfo = document.createElement('div');
+                    fileInfo.className = 'flex items-center';
+                    
+                    const icon = document.createElement('div');
+                    icon.className = 'text-primary-400 mr-3';
+                    
+                    if (file.type.startsWith('video/')) {
+                        icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>';
+                    } else {
+                        icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>';
+                    }
+                    
+                    const name = document.createElement('span');
+                    name.className = 'text-sm font-medium';
+                    name.textContent = file.name;
+                    
+                    const size = document.createElement('span');
+                    size.className = 'text-xs text-gray-400 ml-2';
+                    size.textContent = formatFileSize(file.size);
+                    
+                    fileInfo.appendChild(icon);
+                    fileInfo.appendChild(name);
+                    fileInfo.appendChild(size);
+                    
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'text-gray-400 hover:text-gray-300';
+                    removeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>';
+                    removeBtn.addEventListener('click', () => {
+                        files.splice(index, 1);
+                        updateFileList();
+                    });
+                    
+                    item.appendChild(fileInfo);
+                    item.appendChild(removeBtn);
+                    selectedFiles.appendChild(item);
+                });
+                
+                if (files.length > 0) {
+                    dropzoneText.classList.add('hidden');
+                    fileList.classList.remove('hidden');
+                    transcribeBtn.disabled = false;
+                } else {
+                    dropzoneText.classList.remove('hidden');
+                    fileList.classList.add('hidden');
+                    transcribeBtn.disabled = true;
+                }
+            }
+            
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+            
+            // Initialize the UI on page load
+            validateUrlInput();
+            
+            // Transcribe functionality
+            transcribeBtn.addEventListener('click', function() {
+                if (currentMode === 'upload' && files.length === 0) return;
+                if (currentMode === 'youtube' && !youtubeVideoId) return;
+                
+                // Show progress section
+                progressSection.classList.remove('hidden');
+                resultsSection.classList.add('hidden');
+                progressContainer.innerHTML = '';
+                
+                // Create FormData
+                const formData = new FormData();
+                
+                // Add metadata
+                const title = document.getElementById('title').value;
+                const topic = document.getElementById('topic').value;
+                
+                if (title) formData.append('title', title);
+                if (topic) formData.append('topic', topic);
+                
+                // Disable transcribe button
+                transcribeBtn.disabled = true;
+                
+                let simulateProgress = {};
+                
+                if (currentMode === 'upload') {
+                    // Create progress bars for each file
+                    files.forEach(file => {
+                        const progressItem = document.createElement('div');
+                        progressItem.className = 'flex flex-col mb-4';
+                        progressItem.setAttribute('data-file', file.name);
+                        
+                        const fileInfo = document.createElement('div');
+                        fileInfo.className = 'flex justify-between mb-1';
+                        
+                        const fileName = document.createElement('span');
+                        fileName.className = 'text-sm font-medium text-gray-300';
+                        fileName.textContent = file.name;
+                        
+                        const progressText = document.createElement('span');
+                        progressText.className = 'text-sm text-gray-400';
+                        progressText.textContent = '0%';
+                        
+                        fileInfo.appendChild(fileName);
+                        fileInfo.appendChild(progressText);
+                        
+                        const progressBar = document.createElement('div');
+                        progressBar.className = 'w-full bg-gray-700 rounded-full h-2.5';
+                        
+                        const progressBarInner = document.createElement('div');
+                        progressBarInner.className = 'bg-primary-500 h-2.5 rounded-full';
+                        progressBarInner.style.width = '0%';
+                        
+                        progressBar.appendChild(progressBarInner);
+                        
+                        progressItem.appendChild(fileInfo);
+                        progressItem.appendChild(progressBar);
+                        
+                        progressContainer.appendChild(progressItem);
+                    });
+                    
+                    // Add files to FormData
+                    files.forEach(file => {
+                        formData.append('file', file);
+                    });
+                    
+                    // Setup progress simulation
+                    const fileNames = files.map(f => f.name);
+                    simulateProgress = setupProgressSimulation(fileNames);
+                    
+                } else {
+                    // For URL/Path mode
+                    const videoUrl = youtubeUrl.value.trim();
+                    const urlType = document.querySelector('input[name="url-type"]:checked').value;
+                    
+                    if (urlType === 'youtube') {
+                        formData.append('youtube_url', videoUrl);
+                    } else {
+                        formData.append('file_path', videoUrl);
+                    }
+                    
+                    // Create a single progress bar
+                    const progressItem = document.createElement('div');
+                    progressItem.className = 'flex flex-col';
+                    progressItem.setAttribute('data-file', 'url-source');
+                    
+                    const fileInfo = document.createElement('div');
+                    fileInfo.className = 'flex justify-between mb-1';
+                    
+                    const fileName = document.createElement('span');
+                    fileName.className = 'text-sm font-medium text-gray-300';
+                    fileName.textContent = urlType === 'youtube' ? "YouTube Video" : "Local File";
+                    
+                    const progressText = document.createElement('span');
+                    progressText.className = 'text-sm text-gray-400';
+                    progressText.textContent = '0%';
+                    
+                    fileInfo.appendChild(fileName);
+                    fileInfo.appendChild(progressText);
+                    
+                    const progressBar = document.createElement('div');
+                    progressBar.className = 'w-full bg-gray-700 rounded-full h-2.5';
+                    
+                    const progressBarInner = document.createElement('div');
+                    progressBarInner.className = 'bg-primary-500 h-2.5 rounded-full';
+                    progressBarInner.style.width = '0%';
+                    
+                    progressBar.appendChild(progressBarInner);
+                    
+                    progressItem.appendChild(fileInfo);
+                    progressItem.appendChild(progressBar);
+                    
+                    progressContainer.appendChild(progressItem);
+                    
+                    // Setup progress simulation
+                    simulateProgress = setupProgressSimulation(['url-source']);
+                }
+                
+                // Submit to server
+                fetch('/transcribe', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Stop progress simulation
+                    Object.values(simulateProgress).forEach(item => clearInterval(item.interval));
+                    
+                    // Complete all progress bars
+                    progressContainer.querySelectorAll('[data-file]').forEach(item => {
+                        const progressBarInner = item.querySelector('.bg-primary-500');
+                        const progressText = item.querySelector('.text-gray-400');
+                        
+                        progressBarInner.style.width = '100%';
+                        progressText.textContent = '100%';
+                    });
+                    
+                    // Show results
+                    setTimeout(() => {
+                        progressSection.classList.add('hidden');
+                        resultsSection.classList.remove('hidden');
+                        
+                        resultsContainer.innerHTML = '';
+                        
+                        data.forEach(result => {
+                            const resultItem = document.createElement('div');
+                            resultItem.className = 'bg-dark-900 rounded-lg p-4 border border-gray-700';
+                            
+                            if (result.success) {
+                                resultItem.innerHTML = `
+                                    <div class="flex items-center mb-3">
+                                        <div class="text-green-500 mr-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                            </svg>
+                                        </div>
+                                        <h3 class="text-lg font-medium">${result.title}</h3>
+                                    </div>
+                                    <div class="flex space-x-3 mt-4">
+                                        <a href="/transcript/${result.id}" class="text-primary-400 hover:text-primary-300 text-sm">View Transcript</a>
+                                        <a href="/download/${result.id}" class="text-primary-400 hover:text-primary-300 text-sm">Download</a>
+                                    </div>
+                                `;
+                            } else {
+                                resultItem.innerHTML = `
+                                    <div class="flex items-center mb-3">
+                                        <div class="text-red-500 mr-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                            </svg>
+                                        </div>
+                                        <h3 class="text-lg font-medium">${result.filename}</h3>
+                                    </div>
+                                    <p class="text-red-400 text-sm">${result.error}</p>
+                                `;
+                            }
+                            
+                            resultsContainer.appendChild(resultItem);
+                        });
+                        
+                        // Reset files and form
+                        files = [];
+                        updateFileList();
+                        document.getElementById('title').value = '';
+                        document.getElementById('topic').value = '';
+                        transcribeBtn.disabled = false;
+                    }, 1000);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred during transcription. Please try again.');
+                    
+                    // Reset progress
+                    Object.values(simulateProgress).forEach(item => clearInterval(item.interval));
+                    transcribeBtn.disabled = false;
+                });
+            });
+            
+            function setupProgressSimulation(itemNames) {
+                const simulateProgress = {};
+                
+                itemNames.forEach(name => {
+                    simulateProgress[name] = {
+                        interval: setInterval(() => {
+                            const progressItem = progressContainer.querySelector(`[data-file="${name}"]`);
+                            if (!progressItem) return;
+                            
+                            const progressBarInner = progressItem.querySelector('.bg-primary-500');
+                            const progressText = progressItem.querySelector('.text-gray-400');
+                            
+                            // Get current progress
+                            const currentProgress = parseInt(progressBarInner.style.width) || 0;
+                            
+                            // Simulate progress that slows down near completion
+                            let increment = 5;
+                            if (currentProgress > 70) increment = 2;
+                            if (currentProgress > 90) increment = 0.5;
+                            
+                            const newProgress = Math.min(99, currentProgress + increment);
+                            
+                            // Update progress
+                            progressBarInner.style.width = `${newProgress}%`;
+                            progressText.textContent = `${Math.round(newProgress)}%`;
+                        }, 300)
+                    };
+                });
+                
+                return simulateProgress;
+            }
+        });
+    </script>
+</body>
+</html>
