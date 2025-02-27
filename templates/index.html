@@ -84,7 +84,7 @@
                             <div id="file-list" class="hidden mt-4">
                                 <ul id="selected-files" class="divide-y divide-gray-700"></ul>
                             </div>
-                            <input type="file" id="file-input" class="hidden" multiple accept="video/*">
+                            <input type="file" id="file-input" class="hidden" multiple accept="video/*,audio/*">
                         </div>
                     </div>
                     
@@ -189,7 +189,7 @@
             let currentMode = 'upload'; // 'upload' or 'youtube'
             
             // Tab switching logic
-            uploadTab.addEventListener('click', () => {
+            uploadTab.addEventListener('click', function() {
                 uploadTab.classList.add('border-primary-500', 'text-primary-400');
                 uploadTab.classList.remove('border-gray-700', 'text-gray-400');
                 youtubeTab.classList.add('border-gray-700', 'text-gray-400');
@@ -202,7 +202,7 @@
                 updateTranscribeButtonState();
             });
             
-            youtubeTab.addEventListener('click', () => {
+            youtubeTab.addEventListener('click', function() {
                 youtubeTab.classList.add('border-primary-500', 'text-primary-400');
                 youtubeTab.classList.remove('border-gray-700', 'text-gray-400');
                 uploadTab.classList.add('border-gray-700', 'text-gray-400');
@@ -215,20 +215,29 @@
                 updateTranscribeButtonState();
             });
             
+            // Initialize validateUrlInput
+            function updateTranscribeButtonState() {
+                if (currentMode === 'upload') {
+                    transcribeBtn.disabled = files.length === 0;
+                } else {
+                    transcribeBtn.disabled = !youtubeVideoId;
+                }
+            }
+            
             // YouTube URL handling
             let youtubeTimeout;
             const urlTypeRadios = document.querySelectorAll('input[name="url-type"]');
             
             // Add event listeners to radio buttons
             urlTypeRadios.forEach(radio => {
-                radio.addEventListener('change', () => {
+                radio.addEventListener('change', function() {
                     validateUrlInput();
                 });
             });
             
             youtubeUrl.addEventListener('input', function() {
                 clearTimeout(youtubeTimeout);
-                youtubeTimeout = setTimeout(() => {
+                youtubeTimeout = setTimeout(function() {
                     validateUrlInput();
                 }, 500);
             });
@@ -241,10 +250,11 @@
                 
                 if (urlType === 'youtube') {
                     // YouTube URL validation
-                    if (url && isYouTubeUrl(url)) {
+                    if (url.includes('youtube.com') || url.includes('youtu.be')) {
                         const videoId = extractYouTubeId(url);
                         if (videoId) {
                             youtubeVideoId = videoId;
+                            
                             // Show preview with thumbnail
                             youtubeThumbnail.innerHTML = `<img src="https://img.youtube.com/vi/${videoId}/mqdefault.jpg" class="w-full h-full object-cover">`;
                             
@@ -263,7 +273,6 @@
                     // File path validation
                     if (url && url.trim() !== '') {
                         // Basic validation - just check if it's not empty
-                        // We can't really validate a file path on the client side
                         youtubeVideoId = 'valid'; // Use this as a flag that we have valid input
                         
                         // Show file path preview
@@ -287,25 +296,27 @@
                 }
             }
             
-            function isYouTubeUrl(url) {
-                const regex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$/;
-                return regex.test(url);
-            }
-            
             function extractYouTubeId(url) {
-                const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-                const match = url.match(regExp);
-                return (match && match[7].length === 11) ? match[7] : null;
+                // Handle youtu.be URLs
+                if (url.includes('youtu.be')) {
+                    const parts = url.split('/');
+                    return parts[parts.length - 1].split('?')[0];
+                }
+                // Handle youtube.com URLs
+                else if (url.includes('youtube.com')) {
+                    try {
+                        // Try to extract v parameter using URLSearchParams
+                        const searchParams = new URL(url).searchParams;
+                        return searchParams.get('v');
+                    } catch (e) {
+                        // Fallback to regex extraction
+                        const match = /[?&]v=([^&#]*)/.exec(url);
+                        return match ? match[1] : null;
+                    }
+                }
+                return null;
             }
             
-            function updateTranscribeButtonState() {
-                if (currentMode === 'upload') {
-                    transcribeBtn.disabled = files.length === 0;
-                } else {
-                    transcribeBtn.disabled = !youtubeVideoId;
-                }
-            }
-
             // Dropzone functionality
             dropzone.addEventListener('click', () => fileInput.click());
             
@@ -334,10 +345,10 @@
             });
             
             function handleFiles(fileList) {
-                files = Array.from(fileList).filter(file => file.type.startsWith('video/'));
+                files = Array.from(fileList).filter(file => file.type.startsWith('video/') || file.type.startsWith('audio/'));
                 
                 if (files.length === 0) {
-                    alert('Please select video files only.');
+                    alert('Please select video or audio files only.');
                     return;
                 }
                 
@@ -356,7 +367,12 @@
                     
                     const icon = document.createElement('div');
                     icon.className = 'text-primary-400 mr-3';
-                    icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>';
+                    
+                    if (file.type.startsWith('video/')) {
+                        icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>';
+                    } else {
+                        icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>';
+                    }
                     
                     const name = document.createElement('span');
                     name.className = 'text-sm font-medium';
@@ -408,7 +424,7 @@
             validateUrlInput();
             
             // Transcribe functionality
-            transcribeBtn.addEventListener('click', () => {
+            transcribeBtn.addEventListener('click', function() {
                 if (currentMode === 'upload' && files.length === 0) return;
                 if (currentMode === 'youtube' && !youtubeVideoId) return;
                 
@@ -436,7 +452,7 @@
                     // Create progress bars for each file
                     files.forEach(file => {
                         const progressItem = document.createElement('div');
-                        progressItem.className = 'flex flex-col';
+                        progressItem.className = 'flex flex-col mb-4';
                         progressItem.setAttribute('data-file', file.name);
                         
                         const fileInfo = document.createElement('div');
