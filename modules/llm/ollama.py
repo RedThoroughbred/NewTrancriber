@@ -11,7 +11,7 @@ from typing import Dict, List, Any, Optional, Union
 
 # Default Ollama URL
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
-DEFAULT_MODEL = "mistral"
+DEFAULT_MODEL = "gemma:2b"
 
 class OllamaClient:
     """

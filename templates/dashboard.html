@@ -33,6 +33,14 @@
             }
         }
     </script>
+    <style>
+        .line-clamp-2 {
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+        }
+    </style>
 </head>
 <body class="bg-dark-900 text-white min-h-screen">
     <!-- Delete Confirmation Modal -->
@@ -59,9 +67,25 @@
             <section class="mb-12">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-semibold">Transcript Dashboard</h2>
-                    <a href="/" class="bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition">
-                        New Transcription
-                    </a>
+                    <div class="flex items-center space-x-4">
+                        <!-- View toggle buttons -->
+                        <div class="bg-dark-800 rounded-lg flex overflow-hidden">
+                            <button id="table-view-btn" class="px-3 py-1.5 text-sm font-medium bg-primary-600 text-white">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                            </button>
+                            <button id="card-view-btn" class="px-3 py-1.5 text-sm font-medium text-gray-300 hover:bg-dark-700">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <a href="/" class="bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition">
+                            New Transcription
+                        </a>
+                    </div>
                 </div>
 
                 <div class="bg-dark-800 rounded-xl p-6 shadow-lg">
@@ -92,13 +116,15 @@
                     </div>
 
                     {% if transcripts|length > 0 %}
-                    <div class="overflow-x-auto">
+                    <!-- Table View -->
+                    <div id="table-view" class="overflow-x-auto">
                         <table class="w-full text-left">
                             <thead class="border-b border-gray-700">
                                 <tr>
                                     <th class="pb-3 pt-6 px-4 text-primary-300">Title</th>
                                     <th class="pb-3 pt-6 px-4 text-primary-300">Topic</th>
                                     <th class="pb-3 pt-6 px-4 text-primary-300">Date</th>
+                                    <th class="pb-3 pt-6 px-4 text-primary-300">Summary</th>
                                     <th class="pb-3 pt-6 px-4 text-primary-300">Actions</th>
                                 </tr>
                             </thead>
@@ -106,22 +132,44 @@
                                 {% for transcript in transcripts %}
                                 <tr class="transcript-row hover:bg-dark-900 transition">
                                     <td class="py-4 px-4">
-                                        <div class="font-medium">{{ transcript.title }}</div>
-                                        <div class="text-sm text-gray-400">{{ transcript.original_filename }}</div>
+                                        <div class="font-medium truncate max-w-xs" title="{{ transcript.title }}">{{ transcript.title }}</div>
+                                        <div class="text-sm text-gray-400 truncate max-w-xs" title="{{ transcript.original_filename }}">{{ transcript.original_filename }}</div>
                                     </td>
                                     <td class="py-4 px-4">
                                         {% if transcript.topic %}
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-900 text-primary-300">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-900 text-primary-300 truncate max-w-[150px]" title="{{ transcript.topic }}">
                                             {{ transcript.topic }}
                                         </span>
                                         {% else %}
                                         <span class="text-gray-500">-</span>
                                         {% endif %}
+                                        
+                                        {% if transcript.topics is defined and transcript.topics %}
+                                        <div class="mt-2 flex flex-wrap gap-1">
+                                            {% for topic in transcript.topics[:2] %}
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-dark-900 text-primary-300 truncate max-w-[100px]" title="{{ topic.name }}">
+                                                {{ topic.name }}
+                                            </span>
+                                            {% endfor %}
+                                            {% if transcript.topics|length > 2 %}
+                                            <span class="text-xs text-gray-500">+{{ transcript.topics|length - 2 }}</span>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
                                     </td>
-                                    <td class="py-4 px-4 text-gray-300">
+                                    <td class="py-4 px-4 text-gray-300 whitespace-nowrap">
                                         {{ transcript.date.split('T')[0] }}
                                     </td>
-                                    <td class="py-4 px-4">
+                                    <td class="py-4 px-4 w-60">
+                                        {% if transcript.summary %}
+                                        <div class="text-sm text-gray-300 line-clamp-2 overflow-hidden" title="{{ transcript.summary }}">
+                                            {{ transcript.summary|replace('\n', ' ')|truncate(100) }}
+                                        </div>
+                                        {% else %}
+                                        <span class="text-gray-500 text-sm">No summary yet</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-4 px-4 whitespace-nowrap">
                                         <div class="flex space-x-3">
                                             <a href="/transcript/{{ transcript.id }}" class="text-primary-400 hover:text-primary-300">View</a>
                                             <a href="/download/{{ transcript.id }}" class="text-primary-400 hover:text-primary-300">Download</a>
@@ -136,6 +184,78 @@
                                 {% endfor %}
                             </tbody>
                         </table>
+                    </div>
+                    
+                    <!-- Card View (hidden by default) -->
+                    <div id="card-view" class="hidden">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {% for transcript in transcripts %}
+                            <div class="bg-dark-900 rounded-lg overflow-hidden shadow-lg transition hover:shadow-xl">
+                                <div class="p-5">
+                                    <!-- Card header -->
+                                    <div class="mb-3">
+                                        <h3 class="font-medium text-lg truncate" title="{{ transcript.title }}">{{ transcript.title }}</h3>
+                                        <p class="text-sm text-gray-400 truncate" title="{{ transcript.original_filename }}">{{ transcript.original_filename }}</p>
+                                    </div>
+                                    
+                                    <!-- Date & Duration -->
+                                    <div class="flex justify-between items-center mb-3">
+                                        <div class="text-sm text-gray-300">{{ transcript.date.split('T')[0] }}</div>
+                                        
+                                        {% if transcript.topics is defined and transcript.topics %}
+                                        <span class="text-xs text-primary-400">{{ transcript.topics|length }} topics</span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Topic tags -->
+                                    <div class="mb-3 flex flex-wrap gap-1">
+                                        {% if transcript.topic %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-900 text-primary-300 truncate max-w-[120px]" title="{{ transcript.topic }}">
+                                            {{ transcript.topic }}
+                                        </span>
+                                        {% endif %}
+                                        
+                                        {% if transcript.topics is defined and transcript.topics %}
+                                            {% for topic in transcript.topics[:2] %}
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-dark-800 text-primary-300 truncate max-w-[100px]" title="{{ topic.name }}">
+                                                {{ topic.name }}
+                                            </span>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Summary -->
+                                    <div class="mb-5">
+                                        <p class="text-xs text-primary-400 mb-1">Summary</p>
+                                        {% if transcript.summary %}
+                                        <div class="text-sm text-gray-300 line-clamp-2 h-10 overflow-hidden" title="{{ transcript.summary }}">
+                                            {{ transcript.summary|replace('\n', ' ')|truncate(100) }}
+                                        </div>
+                                        {% else %}
+                                        <span class="text-gray-500 text-sm">No summary yet</span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Actions -->
+                                    <div class="flex justify-between">
+                                        <a href="/transcript/{{ transcript.id }}" class="bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium py-1.5 px-3 rounded transition">
+                                            View
+                                        </a>
+                                        <div class="flex space-x-2">
+                                            <a href="/download/{{ transcript.id }}" class="bg-dark-800 hover:bg-dark-700 text-sm font-medium py-1.5 px-3 rounded transition">
+                                                Download
+                                            </a>
+                                            <button 
+                                                class="bg-red-900 hover:bg-red-800 text-red-300 text-sm font-medium py-1.5 px-3 rounded transition delete-btn" 
+                                                data-id="{{ transcript.id }}"
+                                                data-title="{{ transcript.title }}"
+                                            >Delete</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
                     </div>
                     {% else %}
                     <div class="py-12 text-center">
@@ -165,12 +285,61 @@
             const searchResultsContainer = document.getElementById('search-results-container');
             const closeSearchBtn = document.getElementById('close-search');
             
+            // View switching
+            const tableViewBtn = document.getElementById('table-view-btn');
+            const cardViewBtn = document.getElementById('card-view-btn');
+            const tableView = document.getElementById('table-view');
+            const cardView = document.getElementById('card-view');
+            
+            // Check if view preference is saved
+            const savedView = localStorage.getItem('preferredView') || 'table';
+            
+            // Set initial view based on preference
+            if (savedView === 'card') {
+                tableView.classList.add('hidden');
+                cardView.classList.remove('hidden');
+                tableViewBtn.classList.remove('bg-primary-600', 'text-white');
+                tableViewBtn.classList.add('text-gray-300', 'hover:bg-dark-700');
+                cardViewBtn.classList.remove('text-gray-300', 'hover:bg-dark-700');
+                cardViewBtn.classList.add('bg-primary-600', 'text-white');
+            }
+            
+            // Switch to table view
+            tableViewBtn.addEventListener('click', function() {
+                tableView.classList.remove('hidden');
+                cardView.classList.add('hidden');
+                
+                // Update buttons
+                tableViewBtn.classList.add('bg-primary-600', 'text-white');
+                tableViewBtn.classList.remove('text-gray-300', 'hover:bg-dark-700');
+                cardViewBtn.classList.add('text-gray-300', 'hover:bg-dark-700');
+                cardViewBtn.classList.remove('bg-primary-600', 'text-white');
+                
+                // Save preference
+                localStorage.setItem('preferredView', 'table');
+            });
+            
+            // Switch to card view
+            cardViewBtn.addEventListener('click', function() {
+                tableView.classList.add('hidden');
+                cardView.classList.remove('hidden');
+                
+                // Update buttons
+                tableViewBtn.classList.remove('bg-primary-600', 'text-white');
+                tableViewBtn.classList.add('text-gray-300', 'hover:bg-dark-700');
+                cardViewBtn.classList.remove('text-gray-300', 'hover:bg-dark-700');
+                cardViewBtn.classList.add('bg-primary-600', 'text-white');
+                
+                // Save preference
+                localStorage.setItem('preferredView', 'card');
+            });
+            
             let searchTimeout;
             
             searchInput.addEventListener('input', function() {
                 const searchTerm = this.value.toLowerCase().trim();
                 
-                // First handle the table filtering (this is immediate)
+                // Handle table filtering
                 transcriptRows.forEach(row => {
                     const title = row.querySelector('td:first-child div:first-child').textContent.toLowerCase();
                     const filename = row.querySelector('td:first-child div:last-child').textContent.toLowerCase();
@@ -180,6 +349,24 @@
                         row.classList.remove('hidden');
                     } else {
                         row.classList.add('hidden');
+                    }
+                });
+                
+                // Handle card filtering
+                const cardElements = document.querySelectorAll('#card-view .grid > div');
+                cardElements.forEach(card => {
+                    const title = card.querySelector('h3').textContent.toLowerCase();
+                    const filename = card.querySelector('p').textContent.toLowerCase();
+                    const topicElements = card.querySelectorAll('.mb-3.flex span');
+                    let topicText = '';
+                    topicElements.forEach(el => {
+                        topicText += el.textContent.toLowerCase() + ' ';
+                    });
+                    
+                    if (title.includes(searchTerm) || filename.includes(searchTerm) || topicText.includes(searchTerm)) {
+                        card.classList.remove('hidden');
+                    } else {
+                        card.classList.add('hidden');
                     }
                 });
                 

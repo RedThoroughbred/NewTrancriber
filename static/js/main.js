@@ -69,3 +69,49 @@ function formatFileSize(bytes) {
     
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
+
+// Function to jump to a specific segment in the transcript
+function jumpToSegment(index) {
+    // Update current segment
+    if (currentSegmentIndex >= 0) {
+        document.getElementById(`segment-${currentSegmentIndex}`).classList.remove('bg-dark-900');
+        const timelineSegments = document.querySelectorAll('.timeline-segment');
+        if (timelineSegments.length > currentSegmentIndex) {
+            timelineSegments[currentSegmentIndex].classList.remove('active');
+        }
+    }
+    
+    currentSegmentIndex = index;
+    const segment = segments[index];
+    
+    // Update UI
+    document.getElementById(`segment-${index}`).classList.add('bg-dark-900');
+    const timelineSegments = document.querySelectorAll('.timeline-segment');
+    if (timelineSegments.length > index) {
+        timelineSegments[index].classList.add('active');
+    }
+    document.getElementById('current-time').textContent = formatTime(segment.start);
+    
+    // Scroll to segment
+    document.getElementById(`segment-${index}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    // Update timeline progress
+    document.getElementById('timeline-progress').style.width = `${(segment.start / segments[segments.length - 1].end * 100)}%`;
+    
+    // In a full implementation, this would control video playback
+    console.log(`Jumping to ${formatTime(segment.start)} - ${segment.text}`);
+}
+
+// Function to format time from seconds to minutes:seconds
+function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Function to open the video location
+function openVideoLocation() {
+    // In a real app, this would either open the file or show a modal with the path
+    const filepath = document.querySelector('[data-filepath]')?.dataset.filepath;
+    alert('Video file location: ' + (filepath || 'Not available'));
+}

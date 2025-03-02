@@ -1,0 +1,254 @@
+# Transcription App Architecture Documentation
+
+## Overview
+
+The transcription app is a Flask-based web application that allows users to upload video/audio files, transcribe them using the Whisper model, view the transcripts, and analyze them with AI tools. The app supports searching within transcripts, extracting summaries and topics, and downloading the transcripts.
+
+## Core Files and Their Functions
+
+### Backend
+
+1. **app.py**
+   - Main Flask application file
+   - Defines all routes and API endpoints
+   - Sets up configuration and initialization
+   - Handles file uploads, transcription requests and data processing
+
+2. **run.py**
+   - Entry point for the application
+   - Configures and runs the Flask development server
+
+3. **modules/integration.py**
+   - Handles integration of optional modules with the main app
+   - Initializes Supabase, vector search, and Ollama LLM integrations
+
+4. **modules/llm/ollama.py**
+   - Interfaces with Ollama for local LLM capabilities
+   - Handles communication with the Ollama API
+
+5. **modules/llm/summarize.py**
+   - Contains functions for generating summaries and extracting topics
+   - Uses the LLM integration to process transcript text
+
+6. **modules/supabase/client.py**
+   - Handles connection to Supabase backend
+   - Manages data storage and retrieval
+
+7. **modules/supabase/storage.py**
+   - Specialized functions for file storage in Supabase
+   - Handles uploading and retrieving transcripts and media files
+
+8. **modules/vectors/embeddings.py**
+   - Creates vector embeddings for transcripts
+   - Used for semantic search capabilities
+
+9. **modules/vectors/search.py**
+   - Provides search functionality using vector embeddings
+   - Allows for semantic similarity searches across transcripts
+
+10. **youtube_downloader.py**
+    - Utility for downloading videos from YouTube
+    - Used when a user provides a YouTube URL for transcription
+
+### Frontend
+
+1. **templates/index.html**
+   - Main landing page
+   - Contains the upload form for files or YouTube URLs
+
+2. **templates/dashboard.html**
+   - Lists all transcripts
+   - Provides search functionality across all transcripts
+   - Entry point to individual transcript pages
+
+3. **templates/transcript.html**
+   - Detailed view of a single transcript
+   - Interactive timeline and searchable transcript text
+   - AI analysis tools (summaries, topics)
+   - Download and management options
+
+4. **static/css/style.css**
+   - Custom styling for the application
+   - Supplements the Tailwind CSS framework
+
+5. **static/js/main.js**
+   - Common JavaScript functions used across the app
+   - Handles file validation, UI interactions, etc.
+
+### Data Storage
+
+1. **static/uploads/**
+   - Storage location for uploaded media files
+   - Each file is stored with a UUID filename
+
+2. **static/transcripts/**
+   - Storage location for generated transcripts
+   - Contains JSON files with transcript data and metadata
+   - Also stores plain text versions for download
+
+## Workflow and Core Functionality
+
+### 1. Transcription Process
+
+1. User uploads a video/audio file or provides a YouTube URL on the index page
+2. The file is saved to the uploads directory with a UUID as its filename
+3. The Whisper model processes the file to generate a transcript
+4. The transcript is saved as a JSON file with metadata in the transcripts directory
+5. User is redirected to the transcript view page
+
+### 2. Transcript Viewing
+
+1. The transcript.html template renders the transcript data
+2. Transcript is displayed as segments with timestamps
+3. An interactive timeline allows navigation within the transcript
+4. Search functionality enables finding specific content
+
+### 3. AI Analysis Features
+
+1. Generate Summary:
+   - Sends transcript text to the Ollama LLM
+   - Ollama processes and returns a concise summary
+   - Summary can be saved permanently with the transcript
+
+2. Extract Topics:
+   - Sends transcript to the Ollama LLM for topic analysis
+   - LLM identifies main topics and key points
+   - Topics can be saved with the transcript
+
+### 4. Data Model
+
+The core data structure is the transcript JSON, which includes:
+- Metadata (ID, title, original filename, date, etc.)
+- Full transcript text
+- Segments with timestamps and individual text chunks
+- Optional AI-generated content (summary, topics)
+
+Example transcript structure:
+```json
+{
+  "id": "uuid-string",
+  "title": "Meeting Title",
+  "original_filename": "meeting.mp4",
+  "date": "2025-02-26T22:13:54.240727",
+  "filepath": "static/uploads/uuid-string.mp4",
+  "transcript": "Full transcript text...",
+  "segments": [
+    {
+      "id": 0,
+      "seek": 0,
+      "start": 0.0,
+      "end": 9.0,
+      "text": "Segment text here...",
+      "tokens": [50364, 2205, ...],
+      "temperature": 0.0,
+      "avg_logprob": -0.20629308511922648,
+      "compression_ratio": 1.4831932773109244,
+      "no_speech_prob": 0.05672438442707062
+    },
+    // More segments...
+  ],
+  "summary": "Optional AI-generated summary",
+  "topics": [
+    {
+      "name": "Topic Name",
+      "points": ["Point 1", "Point 2", ...]
+    },
+    // More topics...
+  ]
+}
+```
+
+## API Endpoints
+
+1. **/api/transcripts/{id}/summary**
+   - Generates a summary for the specified transcript
+   - Returns JSON with the generated summary
+
+2. **/api/transcripts/{id}/topics**
+   - Extracts topics and key points from the transcript
+   - Returns JSON with topics, each containing a name and points
+
+3. **/api/transcripts/{id}/save-summary**
+   - Saves a generated summary to the transcript file
+   - Accepts POST with summary text
+
+4. **/api/transcripts/{id}/update**
+   - Updates transcript metadata like title or topic
+   - Accepts POST with fields to update
+
+5. **/api/llm/status**
+   - Checks if the LLM integration is available
+   - Returns available models and configuration
+
+## JavaScript Functions
+
+Key JavaScript functions in the transcript view:
+
+1. **jumpToSegment(index)**
+   - Navigates to a specific segment in the transcript
+   - Updates UI and scrolls to the segment
+
+2. **formatTime(seconds)**
+   - Converts seconds to a formatted time string (MM:SS)
+
+3. **highlightSearchTermInSegments(searchTerm)**
+   - Searches for text in transcript segments
+   - Highlights matching text and builds search results
+
+4. **formatOutput(text)**
+   - Formats LLM output text with proper HTML
+   - Handles bullet points and newlines
+
+## Dependencies
+
+1. **Backend Dependencies**
+   - Flask: Web framework
+   - Whisper: OpenAI's speech-to-text model
+   - NLTK: Natural Language Toolkit for text processing
+   - Ollama: Local LLM serving platform
+   - Various Python utilities (uuid, json, etc.)
+
+2. **Frontend Dependencies**
+   - Tailwind CSS: Utility-first CSS framework
+   - Vanilla JavaScript
+
+## Deployment Notes
+
+- The app can be deployed using Gunicorn (configured in start.sh)
+- Docker configuration is provided in Dockerfile and docker-compose.yml
+- Environment variables can be used to configure:
+  - Whisper model size (WHISPER_MODEL)
+  - Path configurations
+  - Ollama endpoint
+
+## Future Improvements and Optional Features
+
+- Vector database integration for semantic search across transcripts
+- Multi-user support with authentication
+- Additional analysis features (sentiment analysis, action item extraction)
+- Speaker diarization (identifying different speakers)
+- Advanced search filters and tagging system
+
+## Troubleshooting
+
+Common issues and solutions:
+
+1. **Transcription Fails**
+   - Check Whisper model installation
+   - Verify file format compatibility
+   - Check for sufficient disk space
+
+2. **LLM Features Not Working**
+   - Ensure Ollama is running with command: `ollama serve`
+   - Verify the required model is downloaded (e.g., `ollama pull llama2`)
+   - Check network connectivity to Ollama server
+
+3. **UI Issues**
+   - Clear browser cache
+   - Check browser console for JavaScript errors
+   - Verify all static assets are loading correctly
+
+4. **File Upload Issues**
+   - Check file size (limited to MAX_CONTENT_LENGTH)
+   - Verify upload directory permissions
+   - Ensure the file format is supported

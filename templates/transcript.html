@@ -36,285 +36,646 @@
     <style type="text/tailwindcss">
         @layer utilities {
             .timeline-segment:hover {
-                @apply bg-dark-900 cursor-pointer;
+                @apply bg-dark-900/80 cursor-pointer;
             }
             .timeline-segment.active {
-                @apply bg-primary-900;
+                @apply bg-primary-500;
+            }
+            .glass {
+                @apply bg-dark-900/80 backdrop-blur-md border border-white/5;
+            }
+            .btn-hover {
+                @apply transition-all duration-300 ease-in-out hover:shadow-lg hover:-translate-y-1;
+            }
+            .scrollbar-thin {
+                scrollbar-width: thin;
+            }
+            .scrollbar-thin::-webkit-scrollbar {
+                width: 6px;
+                height: 6px;
+            }
+            .scrollbar-thin::-webkit-scrollbar-track {
+                background: rgba(31, 41, 55, 0.2);
+                border-radius: 10px;
+            }
+            .scrollbar-thin::-webkit-scrollbar-thumb {
+                background: rgba(14, 165, 233, 0.5);
+                border-radius: 10px;
+            }
+            .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+                background: rgba(14, 165, 233, 0.7);
+            }
+            /* Animations */
+            @keyframes pulse-glow {
+                0%, 100% { opacity: 0.8; transform: scale(1); }
+                50% { opacity: 1; transform: scale(1.05); }
+            }
+            .animate-pulse-glow {
+                animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
             }
         }
     </style>
 </head>
-<body class="bg-dark-900 text-white min-h-screen">
+<body class="bg-gradient-to-br from-dark-900 to-dark-800 text-white min-h-screen">
     <!-- Delete Confirmation Modal -->
-    <div id="delete-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-dark-800 rounded-lg shadow-lg max-w-md w-full p-6">
-            <h3 class="text-lg font-medium mb-4">Confirm Deletion</h3>
+    <div id="delete-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="glass rounded-xl shadow-2xl max-w-md w-full p-6 scale-100 transition-transform duration-200">
+            <h3 class="text-xl font-medium mb-4 text-primary-300">Confirm Deletion</h3>
             <p class="text-gray-300 mb-6">Are you sure you want to delete this transcript? This action cannot be undone.</p>
             <div class="flex justify-end space-x-4">
-                <button id="cancel-delete" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition">Cancel</button>
-                <button id="confirm-delete" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">Delete</button>
+                <button id="cancel-delete" class="px-4 py-2 bg-dark-800 text-white rounded-lg hover:bg-dark-700 transition">Cancel</button>
+                <button id="confirm-delete" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition btn-hover">Delete</button>
             </div>
         </div>
     </div>
 
-    <div class="container mx-auto px-4 py-8">
-        <header class="flex justify-between items-center mb-12">
-            <h1 class="text-3xl font-bold text-primary-400">Video Transcriber</h1>
-            <nav class="flex space-x-6">
-                <a href="/" class="text-primary-300 hover:text-primary-400 transition">Home</a>
-                <a href="/dashboard" class="text-primary-300 hover:text-primary-400 transition">Dashboard</a>
+    <div class="container mx-auto px-4 py-6">
+        <header class="flex justify-between items-center mb-8 glass rounded-xl p-4">
+            <div class="flex items-center space-x-4">
+                <h1 class="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary-300 to-primary-500 bg-clip-text text-transparent">
+                    Video Transcriber
+                </h1>
+                <span class="text-xs text-primary-300 bg-primary-900/30 px-2 py-1 rounded-full">v1.0</span>
+            </div>
+            <nav class="flex space-x-6 items-center">
+                <a href="/" class="text-primary-300 hover:text-primary-400 transition flex items-center space-x-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    <span>Home</span>
+                </a>
+                <a href="/dashboard" class="text-primary-300 hover:text-primary-400 transition flex items-center space-x-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                    </svg>
+                    <span>Dashboard</span>
+                </a>
             </nav>
         </header>
-
-        <main class="max-w-6xl mx-auto">
-            <section class="mb-12">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                    <div>
-                        <h2 class="text-2xl font-semibold">{{ transcript.title }}</h2>
-                        <p class="text-gray-400">{{ transcript.original_filename }}</p>
-                    </div>
-                    <div class="flex space-x-3">
-                        <a href="/download/{{ transcript.id }}" class="bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
-                            Download
-                        </a>
-                        <button onclick="openVideoLocation()" class="bg-dark-800 hover:bg-dark-700 text-white font-medium py-2 px-4 rounded-lg border border-gray-700 transition flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                            View Video
-                        </button>
-                        <button onclick="deleteTranscript()" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            Delete
-                        </button>
+        <main class="max-w-7xl mx-auto">
+        </main>
+            <section>
+                <!-- File info and actions bar -->
+                <div class="glass rounded-xl p-5 mb-6 transition-all">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div class="flex items-center space-x-4">
+                            <div class="flex-shrink-0 w-10 h-10 bg-primary-900/50 rounded-lg flex items-center justify-center text-primary-300">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold">{{ transcript.title }}</h2>
+                                <p class="text-gray-400 text-sm flex items-center">
+                                    <span class="mr-3">{{ transcript.original_filename }}</span>
+                                    <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-primary-900/30 text-primary-300">
+                                        {{ (transcript.segments[-1].end / 60)|int }}:{{ '%02d' % ((transcript.segments[-1].end % 60)|int) }}
+                                    </span>
+                                </p>
+                            </div>
+                            <!-- Add AI Status Indicator -->
+                            <div class="ml-2 bg-green-900/20 text-green-400 px-2 py-1 rounded-full text-xs flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                AI Analysis Complete
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap md:flex-nowrap gap-2">
+                            <a href="/download/{{ transcript.id }}" class="btn-hover bg-primary-700 hover:bg-primary-600 text-white font-medium py-2 px-4 rounded-lg transition flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                Download Enhanced Report
+                            </a>
+                            <button onclick="openVideoLocation()" class="btn-hover bg-dark-800 hover:bg-dark-700 text-white font-medium py-2 px-4 rounded-lg border border-dark-700 transition flex items-center" data-filepath="{{ transcript.filepath }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                View Video
+                            </button>
+                            <button onclick="deleteTranscript()" class="btn-hover bg-red-600/80 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg transition flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Delete
+                            </button>
+                        </div>
                     </div>
                 </div>
 
+                <!-- Main content grid -->
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    <!-- Transcript Metadata -->
-                    <div class="lg:col-span-3">
-                        <div class="bg-dark-800 rounded-xl p-6 shadow-lg mb-6">
-                            <h3 class="text-lg font-medium mb-4 text-primary-300">Transcript Details</h3>
-                            <div class="space-y-4">
-                                <div>
-                                    <p class="text-sm text-gray-400">Date</p>
-                                    <p>{{ transcript.date.split('T')[0] }}</p>
-                                </div>
-                                {% if transcript.topic %}
-                                <div>
-                                    <p class="text-sm text-gray-400">Topic</p>
-                                    <p>{{ transcript.topic }}</p>
-                                </div>
-                                {% endif %}
-                                <div>
-                                    <p class="text-sm text-gray-400">File</p>
-                                    <p class="truncate">{{ transcript.original_filename }}</p>
-                                </div>
-                                {% if transcript.youtube_url is defined and transcript.youtube_url %}
-                                <div>
-                                    <p class="text-sm text-gray-400">YouTube</p>
-                                    <a href="{{ transcript.youtube_url }}" target="_blank" class="text-primary-400 hover:text-primary-300 truncate">
-                                        {{ transcript.youtube_url }}
-                                    </a>
-                                </div>
-                                {% if transcript.youtube_channel is defined and transcript.youtube_channel %}
-                                <div>
-                                    <p class="text-sm text-gray-400">Channel</p>
-                                    <p class="truncate">{{ transcript.youtube_channel }}</p>
-                                </div>
-                                {% endif %}
-                                {% else %}
-                                <div>
-                                    <p class="text-sm text-gray-400">Storage Path</p>
-                                    <p class="truncate text-xs">{{ transcript.filepath }}</p>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <div class="bg-dark-800 rounded-xl p-6 shadow-lg">
-                            <h3 class="text-lg font-medium mb-4 text-primary-300">Search Transcript</h3>
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                    <svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                    </svg>
-                                </div>
-                                <input type="text" id="search" class="w-full pl-10 pr-4 py-2 bg-dark-900 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent" placeholder="Search in transcript...">
-                            </div>
-                            <div id="search-results" class="mt-4 max-h-72 overflow-y-auto hidden">
-                                <h4 class="text-sm font-medium mb-2 text-primary-300">Results (<span id="results-count">0</span>)</h4>
-                                <ul id="results-list" class="space-y-2"></ul>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Transcript Content -->
-                    <div class="lg:col-span-9">
-                        <div class="bg-dark-800 rounded-xl shadow-lg overflow-hidden">
-                            <!-- Timeline Navigation -->
-                            <div class="bg-dark-900 p-4 border-b border-gray-700">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h3 class="text-lg font-medium">Timeline</h3>
-                                    <div class="text-sm text-gray-400">
-                                        <span id="current-time">0:00</span> / <span id="total-time">{{ (transcript.segments[-1].end / 60)|int }}:{{ '%02d' % ((transcript.segments[-1].end % 60)|int) }}</span>
+                    <!-- Main transcript panel -->
+                    <div class="lg:col-span-8 lg:order-1 order-2">
+                        <div class="glass rounded-xl shadow-lg overflow-hidden flex flex-col h-full">
+                            <!-- Video/Audio player & timeline -->
+                            <div class="bg-dark-900/90 border-b border-dark-700 sticky top-0 z-10">
+                                <div class="p-4">
+                                    <div class="mb-3 flex justify-between items-center">
+                                        <div class="flex items-center space-x-2">
+                                            <button id="play-btn" class="p-2 rounded-full bg-primary-600/20 text-primary-300 hover:bg-primary-600/30 transition">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                            </button>
+                                            <select id="speed-select" class="bg-dark-800 text-white p-1 rounded">
+                                                <option value="1">1x</option>
+                                                <option value="1.5">1.5x</option>
+                                                <option value="2">2x</option>
+                                            </select>
+                                            <div class="text-sm text-gray-300">
+                                                <span id="current-time" class="tabular-nums">0:00</span> / 
+                                                <span id="total-time" class="tabular-nums">{{ (transcript.segments[-1].end / 60)|int }}:{{ '%02d' % ((transcript.segments[-1].end % 60)|int) }}</span>
+                                            </div>
+                                        </div>
+                                        <h3 class="text-lg font-medium text-primary-300 hidden md:block">Timeline</h3>
+                                        <div class="flex items-center space-x-2">
+                                            <button class="p-2 rounded-full bg-dark-800 hover:bg-dark-700 transition" title="Speed: 1x">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                                </svg>
+                                            </button>
+                                            <button id="rewind-btn" class="p-2 rounded-full bg-dark-800 hover:bg-dark-700 transition" title="Jump back 10s">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.333 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                            
+                                    <!-- Enhanced timeline -->
+                                    <div class="relative">
+                                        <div class="relative h-8 bg-dark-800/50 rounded-xl overflow-hidden border border-dark-700" id="timeline-container">
+                                            <div class="absolute top-0 left-0 h-full bg-primary-600/30" id="timeline-progress" style="width: 0%;"></div>
+                                            
+                                            <!-- Timeline markers for segments -->
+                                            {% for segment in transcript.segments %}
+                                            <div 
+                                                class="timeline-segment absolute top-0 h-full hover:bg-opacity-50 transition duration-150" 
+                                                style="left: {{ (segment.start / transcript.segments[-1].end * 100)|float }}%; width: {{ ((segment.end - segment.start) / transcript.segments[-1].end * 100)|float }}%;"
+                                                data-start="{{ segment.start }}"
+                                                data-end="{{ segment.end }}"
+                                                data-index="{{ loop.index0 }}"
+                                                onclick="jumpToSegment({{ loop.index0 }})"
+                                                title="{{ '%02d:%02d' % ((segment.start / 60)|int, (segment.start % 60)|int) }} - {{ '%02d:%02d' % ((segment.end / 60)|int, (segment.end % 60)|int) }}"
+                                            ></div>
+                                            {% endfor %}
+                                            
+                                            <!-- Playhead -->
+                                            <div class="absolute top-0 h-full w-0.5 bg-primary-400 pointer-events-none hidden" id="playhead" style="left: 0%;">
+                                                <div class="absolute top-0 h-2 w-2 rounded-full bg-primary-400 -ml-1"></div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Time markers -->
+                                        <div class="flex justify-between text-xs text-gray-400 mt-1 px-2">
+                                            <span>0:00</span>
+                                            <span>{{ (transcript.segments[-1].end / 60 / 4)|int }}:{{ '%02d' % ((transcript.segments[-1].end / 4 % 60)|int) }}</span>
+                                            <span>{{ (transcript.segments[-1].end / 60 / 2)|int }}:{{ '%02d' % ((transcript.segments[-1].end / 2 % 60)|int) }}</span>
+                                            <span>{{ (transcript.segments[-1].end / 60 * 3/4)|int }}:{{ '%02d' % ((transcript.segments[-1].end * 3/4 % 60)|int) }}</span>
+                                            <span>{{ (transcript.segments[-1].end / 60)|int }}:{{ '%02d' % ((transcript.segments[-1].end % 60)|int) }}</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="relative h-8 bg-dark-800 rounded-lg overflow-hidden" id="timeline-container">
-                                    <div class="absolute top-0 left-0 h-full bg-primary-900 opacity-30" id="timeline-progress" style="width: 0%;"></div>
+                            </div>
+                            <!-- Transcript content -->
+                            <div class="p-2 md:p-4 flex flex-col h-full">
+                                <div class="flex justify-between items-center px-2 mb-3">
+                                    <div class="flex items-center">
+                                        <h3 class="text-lg font-medium text-primary-300">Transcript</h3>
+                                        <button id="view-mode-toggle" onclick="toggleTranscriptView()" class="ml-2 p-1 rounded-lg bg-dark-800/50 border border-gray-700/50 text-xs flex items-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                            </svg>
+                                            <span id="view-mode-text">Condensed</span>
+                                        </button>
+                                    </div>
+                                    <div class="relative" title="Search in transcript">
+                                        <input type="text" id="transcript-search" placeholder="Search in transcript..." class="w-48 md:w-64 pl-8 pr-2 py-1 text-sm bg-dark-800/50 border border-gray-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-500">
+                                        <div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
+                                            <svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div id="search-results" class="px-2 py-2 mb-2 bg-dark-800/50 rounded-lg text-sm border border-gray-700/50 hidden">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span id="results-count" class="text-primary-300 font-medium">0 results</span>
+                                        <button id="close-search-results" class="text-gray-400 hover:text-gray-300">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div id="results-list" class="max-h-32 overflow-y-auto scrollbar-thin space-y-1"></div>
+                                </div>
+                                
+                                <!-- Transcript text with enhanced styling - fixed height scrollable container -->
+                                <div class="max-h-[calc(100vh-270px)] overflow-y-auto scrollbar-thin" id="transcript-content">
                                     {% for segment in transcript.segments %}
                                     <div 
-                                        class="timeline-segment absolute top-0 h-full hover:bg-opacity-50 transition duration-150" 
-                                        style="left: {{ (segment.start / transcript.segments[-1].end * 100)|float }}%; width: {{ ((segment.end - segment.start) / transcript.segments[-1].end * 100)|float }}%;"
-                                        data-start="{{ segment.start }}"
+                                        class="mb-3 p-3 rounded-lg hover:bg-dark-800/50 transition-all segment group" 
+                                        id="segment-{{ loop.index0 }}" 
+                                        data-start="{{ segment.start }}" 
                                         data-end="{{ segment.end }}"
-                                        data-index="{{ loop.index0 }}"
                                         onclick="jumpToSegment({{ loop.index0 }})"
-                                        title="{{ '%02d:%02d' % ((segment.start / 60)|int, (segment.start % 60)|int) }} - {{ '%02d:%02d' % ((segment.end / 60)|int, (segment.end % 60)|int) }}"
-                                    ></div>
+                                    >
+                                        <div class="flex justify-between items-center mb-1">
+                                            <div class="text-primary-400 text-xs font-medium tabular-nums">
+                                                {{ '%02d:%02d' % ((segment.start / 60)|int, (segment.start % 60)|int) }} - {{ '%02d:%02d' % ((segment.end / 60)|int, (segment.end % 60)|int) }}
+                                            </div>
+                                            <div class="opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
+                                                <button class="text-gray-400 hover:text-primary-300 p-1" title="Copy segment" onclick="event.stopPropagation(); copySegmentText({{ loop.index0 }})">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <p class="segment-text text-gray-100">{{ segment.text }}</p>
+                                    </div>
                                     {% endfor %}
                                 </div>
                             </div>
-                            
-                            <!-- Transcript Text -->
-                            <div class="p-6 max-h-[70vh] overflow-y-auto" id="transcript-content">
-                                {% for segment in transcript.segments %}
-                                <div 
-                                    class="mb-4 p-3 rounded-lg hover:bg-dark-900 transition segment" 
-                                    id="segment-{{ loop.index0 }}" 
-                                    data-start="{{ segment.start }}" 
-                                    data-end="{{ segment.end }}"
-                                    onclick="jumpToSegment({{ loop.index0 }})"
-                                >
-                                    <div class="text-primary-400 text-sm mb-1">
-                                        {{ '%02d:%02d' % ((segment.start / 60)|int, (segment.start % 60)|int) }} - {{ '%02d:%02d' % ((segment.end / 60)|int, (segment.end % 60)|int) }}
-                                    </div>
-                                    <p class="segment-text">{{ segment.text }}</p>
+                        </div>
+                    </div>
+                    <!-- Sidebar with tools and analysis -->
+                    <div class="lg:col-span-4 lg:order-2 order-1">
+                        <div class="space-y-5">
+                            <!-- Tab navigation for sidebar tools -->
+                            <div class="glass rounded-xl overflow-hidden">
+                                <div class="flex border-b border-dark-700/50">
+                                    <button id="tab-summary" onclick="switchTab('summary')" class="flex-1 py-3 px-4 text-primary-300 border-b-2 border-primary-500 font-medium text-sm">
+                                        <span class="flex items-center justify-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                            Summary
+                                        </span>
+                                    </button>
+                                    <button id="tab-topics" onclick="switchTab('topics')" class="flex-1 py-3 px-4 text-gray-400 border-b-2 border-transparent hover:text-gray-300 font-medium text-sm">
+                                        <span class="flex items-center justify-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                            </svg>
+                                            Topics
+                                        </span>
+                                    </button>
+                                    <button id="tab-insights" onclick="switchTab('insights')" class="flex-1 py-3 px-4 text-gray-400 border-b-2 border-transparent hover:text-gray-300 font-medium text-sm">
+                                        <span class="flex items-center justify-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            Meeting Insights
+                                        </span>
+                                    </button>
                                 </div>
-                                {% endfor %}
+                                
+                                <!-- Summary Panel -->
+                                <div id="panel-summary" class="p-5">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h3 class="text-lg font-medium text-primary-300">Transcript Summary</h3>
+                                    </div>
+                                    
+                                    {% if transcript.summary %}
+                                    <div class="bg-dark-800/50 rounded-lg p-4 border border-dark-700/50">
+                                        <div class="text-sm whitespace-pre-wrap">{{ transcript.summary }}</div>
+                                    </div>
+                                    {% else %}
+                                    <div class="bg-dark-800/30 rounded-lg p-6 border border-dark-700/30 text-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto mb-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        <p class="text-gray-400 mb-3">No summary available</p>
+                                        <p class="text-sm text-gray-500">This transcript has not been analyzed yet</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Topics Panel -->
+                                <div id="panel-topics" class="p-5 hidden">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h3 class="text-lg font-medium text-primary-300">Key Topics</h3>
+                                    </div>
+                                    
+                                    {% if transcript.topics %}
+                                    <div class="space-y-4">
+                                        {% for topic in transcript.topics %}
+                                        <div class="bg-dark-800/50 rounded-lg p-4 border border-dark-700/50">
+                                            <h5 class="font-medium text-primary-300 mb-2 flex items-center">
+                                                <span class="inline-block w-2 h-2 bg-primary-400 rounded-full mr-2"></span>
+                                                {{ topic.name }}
+                                            </h5>
+                                            <ul class="space-y-1 pl-4">
+                                                {% for point in topic.points %}
+                                                <li class="text-sm relative before:absolute before:content-['•'] before:text-primary-400 before:-left-4">
+                                                    {{ point }}
+                                                </li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <div class="bg-dark-800/30 rounded-lg p-6 border border-dark-700/30 text-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto mb-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                        </svg>
+                                        <p class="text-gray-400 mb-3">No topics available</p>
+                                        <p class="text-sm text-gray-500">This transcript has not been analyzed yet</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Meeting Insights Panel (New) -->
+                                <div id="panel-insights" class="p-5 hidden">
+                                    <h3 class="text-lg font-medium mb-4 text-primary-300">Meeting Intelligence</h3>
+                                    
+                                    <!-- Questions & Answers -->
+                                    <div class="space-y-4">
+                                        <div class="bg-dark-800/50 rounded-lg p-4 border border-dark-700/50">
+                                            <h4 class="font-medium text-primary-300 mb-3">Questions & Answers</h4>
+                                            {% if transcript.qa_pairs and transcript.qa_pairs|length > 0 %}
+                                                {% for qa in transcript.qa_pairs %}
+                                                <div class="mb-3 pb-3 {% if not loop.last %}border-b border-dark-700/30{% endif %}">
+                                                    <div class="flex items-start">
+                                                        <div class="bg-primary-800/30 rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold text-primary-300 mr-2 mt-1">Q</div>
+                                                        <div>
+                                                            <p class="text-white">{{ qa.question }}</p>
+                                                            <p class="text-xs text-gray-400">Asked by: {{ qa.asker }}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex items-start mt-2 ml-8">
+                                                        <div class="bg-primary-700/20 rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold text-primary-300 mr-2 mt-1">A</div>
+                                                        <div>
+                                                            <p class="text-gray-200">{{ qa.answer }}</p>
+                                                            <p class="text-xs text-gray-400">Answered by: {{ qa.answerer }}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            {% else %}
+                                                <p class="text-gray-400">No questions and answers identified.</p>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <!-- Key Decisions -->
+                                        <div class="bg-dark-800/50 rounded-lg p-4 border border-dark-700/50">
+                                            <h4 class="font-medium text-primary-300 mb-3">Key Decisions</h4>
+                                            {% if transcript.decisions and transcript.decisions|length > 0 %}
+                                                <div class="space-y-3">
+                                                    {% for decision in transcript.decisions %}
+                                                    <div class="bg-dark-900/30 rounded-lg p-3 border border-dark-700/30">
+                                                        <h5 class="font-medium text-primary-200">{{ decision.decision }}</h5>
+                                                        <p class="text-sm text-gray-300 mt-1">{{ decision.context }}</p>
+                                                        <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs">
+                                                            <div><span class="text-gray-400">Impact:</span> 
+                                                                <span class="{% if decision.impact == 'High' %}text-red-400{% elif decision.impact == 'Low' %}text-green-400{% else %}text-yellow-400{% endif %}">
+                                                                    {{ decision.impact }}
+                                                                </span>
+                                                            </div>
+                                                            <div><span class="text-gray-400">Stakeholders:</span> {{ decision.stakeholders|join(', ') }}</div>
+                                                            {% if decision.next_steps %}
+                                                            <div class="w-full mt-1"><span class="text-gray-400">Next Steps:</span> {{ decision.next_steps }}</div>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                            {% else %}
+                                                <p class="text-gray-400">No key decisions identified.</p>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <!-- Personal Commitments -->
+                                        <div class="bg-dark-800/50 rounded-lg p-4 border border-dark-700/50">
+                                            <h4 class="font-medium text-primary-300 mb-3">Personal Commitments</h4>
+                                            {% if transcript.commitments and transcript.commitments|length > 0 %}
+                                                <div class="space-y-2">
+                                                    {% for commitment in transcript.commitments %}
+                                                    <div class="flex items-center">
+                                                        <div class="bg-primary-900/30 rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold text-primary-300 mr-2">
+                                                            {{ commitment.person[:1] }}
+                                                        </div>
+                                                        <div class="flex-1">
+                                                            <p class="text-white text-sm">{{ commitment.commitment }}</p>
+                                                            <div class="flex flex-wrap gap-x-3 text-xs text-gray-400">
+                                                                <span>By: {{ commitment.person }}</span>
+                                                                {% if commitment.timeframe != "Not specified" %}
+                                                                <span>Timeframe: {{ commitment.timeframe }}</span>
+                                                                {% endif %}
+                                                                <span>Confidence: 
+                                                                    <span class="{% if commitment.confidence == 'High' %}text-green-400{% elif commitment.confidence == 'Low' %}text-red-400{% else %}text-yellow-400{% endif %}">
+                                                                        {{ commitment.confidence }}
+                                                                    </span>
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                            {% else %}
+                                                <p class="text-gray-400">No personal commitments identified.</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Search panel -->
+                            <div class="glass rounded-xl p-5 shadow-lg">
+                                <h3 class="text-lg font-medium mb-4 text-primary-300">Search Transcript</h3>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                        <svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                    </div>
+                                    <input type="text" id="search" class="w-full pl-10 pr-4 py-2 bg-dark-900/50 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent" placeholder="Find words or phrases...">
+                                </div>
+                                <div id="search-results" class="mt-4 max-h-72 overflow-y-auto scrollbar-thin hidden">
+                                    <h4 class="text-sm font-medium mb-2 text-primary-300">Results (<span id="results-count">0</span>)</h4>
+                                    <ul id="results-list" class="space-y-2"></ul>
+                                </div>
+                            </div>
+                            
+                            <!-- Transcript info -->
+                            <div class="glass rounded-xl p-5 shadow-lg">
+                                <h3 class="text-lg font-medium mb-4 text-primary-300">Transcript Info</h3>
+                                <div class="space-y-3 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Duration:</span>
+                                        <span class="font-medium">{{ (transcript.segments[-1].end / 60)|int }}m {{ (transcript.segments[-1].end % 60)|int }}s</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Segments:</span>
+                                        <span class="font-medium">{{ transcript.segments|length }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Created:</span>
+                                        <span class="font-medium">{{ transcript.date.split('T')[0] }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">File:</span>
+                                        <span class="font-medium truncate max-w-[150px]" title="{{ transcript.original_filename }}">{{ transcript.original_filename }}</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
         </main>
+        
+        <!-- Notification toast -->
+        <div id="notification-toast" class="fixed bottom-4 right-4 bg-primary-900/80 backdrop-blur-sm text-primary-200 rounded-lg shadow-lg p-4 max-w-xs transform translate-y-10 opacity-0 transition-all duration-300 pointer-events-none z-50 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span id="notification-message">Action completed successfully</span>
+        </div>
     </div>
-
     <script>
         const segments = JSON.parse('{{ transcript.segments|tojson }}');
         let currentSegmentIndex = -1;
         
-        function formatTime(seconds) {
-            const mins = Math.floor(seconds / 60);
-            const secs = Math.floor(seconds % 60);
-            return `${mins}:${secs.toString().padStart(2, '0')}`;
-        }
-        
-        function jumpToSegment(index) {
-            // Update current segment
-            if (currentSegmentIndex >= 0) {
-                document.getElementById(`segment-${currentSegmentIndex}`).classList.remove('bg-dark-900');
-                document.querySelectorAll('.timeline-segment')[currentSegmentIndex].classList.remove('active');
-            }
-            
-            currentSegmentIndex = index;
-            const segment = segments[index];
-            
-            // Update UI
-            document.getElementById(`segment-${index}`).classList.add('bg-dark-900');
-            document.querySelectorAll('.timeline-segment')[index].classList.add('active');
-            document.getElementById('current-time').textContent = formatTime(segment.start);
-            
-            // Scroll to segment
-            document.getElementById(`segment-${index}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
-            // Update timeline progress
-            document.getElementById('timeline-progress').style.width = `${(segment.start / segments[segments.length - 1].end * 100)}%`;
-            
-            // In a full implementation, this would control video playback
-            console.log(`Jumping to ${formatTime(segment.start)} - ${segment.text}`);
-        }
-        
-        function openVideoLocation() {
-            // In a real app, this would either open the file or show a modal with the path
-            alert('Video file location: {{ transcript.filepath }}');
-        }
-        
-        function deleteTranscript() {
-            // Show the confirmation modal
-            document.getElementById('delete-modal').classList.remove('hidden');
-        }
-        
-        function highlightSearchTermInSegments(searchTerm) {
-            if (!searchTerm || searchTerm.length < 2) return [];
-            
-            const segmentElements = document.querySelectorAll('.segment-text');
-            const results = [];
-            
-            // Loop through all segments to find matches
-            segments.forEach((segment, index) => {
-                const segmentText = segment.text.toLowerCase();
-                if (segmentText.includes(searchTerm.toLowerCase())) {
-                    // Highlight the text with a span
-                    const segmentEl = segmentElements[index];
-                    const regex = new RegExp(`(${searchTerm})`, 'gi');
-                    segmentEl.innerHTML = segment.text.replace(regex, '<span class="bg-primary-900 text-primary-200">$1</span>');
+        document.addEventListener('DOMContentLoaded', function() {
+            // Play/Scroll functionality
+            let isPlaying = false;
+            let scrollInterval;
+            const playBtn = document.getElementById('play-btn');
+            const speedSelect = document.getElementById('speed-select');
+            const transcriptContent = document.getElementById('transcript-content');
+
+            function startScrolling() {
+                const speed = parseFloat(speedSelect.value);
+                const pixelsPerSecond = 50 / speed; // Adjust this for smoother/faster scrolling
+                let lastTime = segments[segments.length - 1].end;
+
+                scrollInterval = setInterval(() => {
+                    const currentTime = parseFloat(document.getElementById('current-time').textContent.split(':').reduce((acc, time) => (60 * acc) + +time));
+                    const nextTime = currentTime + (1 / speed);
+                    if (nextTime >= lastTime) {
+                        stopScrolling();
+                        return;
+                    }
+
+                    const nextSegment = segments.find(s => s.start >= nextTime) || segments[segments.length - 1];
+                    const segmentIndex = segments.indexOf(nextSegment);
                     
-                    // Add to results
-                    results.push({
-                        index: index,
-                        text: segment.text,
-                        start: segment.start
-                    });
+                    // Update timeline and current time without scrolling the whole page
+                    document.getElementById('current-time').textContent = formatTime(nextSegment.start);
+                    document.getElementById('timeline-progress').style.width = (nextSegment.start / lastTime * 100) + '%';
+                    document.querySelectorAll('.timeline-segment')[segmentIndex].classList.add('active');
+                    if (currentSegmentIndex >= 0 && currentSegmentIndex !== segmentIndex) {
+                        document.querySelectorAll('.timeline-segment')[currentSegmentIndex].classList.remove('active');
+                    }
+                    currentSegmentIndex = segmentIndex;
+
+                    // Scroll only the transcript content
+                    const segmentElement = document.getElementById('segment-' + segmentIndex);
+                    if (segmentElement) {
+                        transcriptContent.scrollTop = segmentElement.offsetTop - transcriptContent.offsetTop - 50; // Offset to keep some context above
+                    }
+                }, 1000);
+            }
+
+            function stopScrolling() {
+                clearInterval(scrollInterval);
+                isPlaying = false;
+                playBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
+            }
+
+            playBtn.addEventListener('click', () => {
+                if (isPlaying) {
+                    stopScrolling();
+                } else {
+                    isPlaying = true;
+                    playBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>'; // Pause icon
+                    startScrolling();
                 }
             });
+
+            document.getElementById('rewind-btn').addEventListener('click', () => {
+                const currentTime = parseFloat(document.getElementById('current-time').textContent.split(':').reduce((acc, time) => (60 * acc) + +time));
+                const newTime = Math.max(0, currentTime - 10);
+                const newSegment = segments.find(s => s.start >= newTime) || segments[0];
+                jumpToSegment(segments.indexOf(newSegment));
+            });
             
-            // Jump to the first result if any
-            if (results.length > 0) {
-                jumpToSegment(results[0].index);
-            }
+            // Add timeline click functionality
+            const timelineContainer = document.getElementById('timeline-container');
+            timelineContainer.addEventListener('click', function(e) {
+                const rect = this.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const percentage = (clickX / rect.width);
+                
+                // Get timestamp at click position
+                const totalDuration = segments[segments.length - 1].end;
+                const clickedTime = percentage * totalDuration;
+                
+                // Find closest segment to the clicked time
+                let closestSegment = 0;
+                let minDistance = Number.MAX_VALUE;
+                
+                segments.forEach((segment, index) => {
+                    const distance = Math.abs(segment.start - clickedTime);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestSegment = index;
+                    }
+                });
+                
+                // Jump to that segment
+                jumpToSegment(closestSegment);
+            });
             
-            return results;
-        }
-        
-        document.addEventListener('DOMContentLoaded', function() {
+            // Search functionality
             const searchInput = document.getElementById('search');
+            const transcriptSearchInput = document.getElementById('transcript-search');
             const searchResults = document.getElementById('search-results');
             const resultsList = document.getElementById('results-list');
             const resultsCount = document.getElementById('results-count');
+            
+            // Connect the two search inputs
+            transcriptSearchInput.addEventListener('input', function() {
+                searchInput.value = this.value;
+                searchInput.dispatchEvent(new Event('input'));
+            });
+            
+            searchInput.addEventListener('input', function() {
+                transcriptSearchInput.value = this.value;
+                const searchTerm = this.value.toLowerCase().trim();
+                highlightSearchTermInSegments(searchTerm);
+            });
+            
+            // Close search results
+            const closeSearchResults = document.getElementById('close-search-results');
+            if (closeSearchResults) {
+                closeSearchResults.addEventListener('click', function() {
+                    document.getElementById('search-results').classList.add('hidden');
+                });
+            }
             
             // Delete modal functionality
             const deleteModal = document.getElementById('delete-modal');
             const cancelDeleteBtn = document.getElementById('cancel-delete');
             const confirmDeleteBtn = document.getElementById('confirm-delete');
             
-            // Handle cancel button
             cancelDeleteBtn.addEventListener('click', function() {
                 deleteModal.classList.add('hidden');
             });
             
-            // Close modal on outside click
-            deleteModal.addEventListener('click', function(event) {
-                if (event.target === deleteModal) {
-                    deleteModal.classList.add('hidden');
-                }
-            });
-            
-            // Handle confirm delete
             confirmDeleteBtn.addEventListener('click', function() {
-                // Send delete request
-                fetch(`/delete/{{ transcript.id }}`, {
+                fetch('/delete/{{ transcript.id }}', {
                     method: 'POST',
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Redirect to dashboard after successful deletion
                         window.location.href = '/dashboard';
                     } else {
                         alert('Error deleting transcript: ' + (data.error || 'Unknown error'));
@@ -328,115 +689,258 @@
                 });
             });
             
-            // Check for search parameter in URL (coming from global search)
-            const urlParams = new URLSearchParams(window.location.search);
-            const urlSearchTerm = urlParams.get('search');
+            // Add playhead indicator
+            const playhead = document.getElementById('playhead');
             
-            if (urlSearchTerm) {
-                // Set the search input value
-                searchInput.value = urlSearchTerm;
+            timelineContainer.addEventListener('mousemove', function(e) {
+                const rect = this.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const percentage = (x / rect.width) * 100;
                 
-                // Perform the search
-                const results = highlightSearchTermInSegments(urlSearchTerm);
+                playhead.style.left = `${percentage}%`;
+                playhead.classList.remove('hidden');
                 
-                // Update results display
-                resultsList.innerHTML = '';
-                results.forEach(result => {
-                    const item = document.createElement('li');
-                    item.className = 'p-2 rounded-lg hover:bg-dark-900 cursor-pointer';
-                    
-                    const time = document.createElement('div');
-                    time.className = 'text-xs text-primary-400';
-                    time.textContent = formatTime(result.start);
-                    
-                    // Get the text with highlighted search term
-                    const textEl = document.createElement('p');
-                    textEl.className = 'text-sm';
-                    
-                    const regex = new RegExp(`(${urlSearchTerm})`, 'gi');
-                    const highlightedText = result.text.replace(regex, '<span class="bg-primary-900 text-primary-200">$1</span>');
-                    textEl.innerHTML = highlightedText;
-                    
-                    item.appendChild(time);
-                    item.appendChild(textEl);
-                    
-                    item.addEventListener('click', () => {
-                        jumpToSegment(result.index);
-                    });
-                    
-                    resultsList.appendChild(item);
-                });
+                // Calculate time at this position
+                const totalDuration = segments[segments.length - 1].end;
+                const timeAt = (percentage / 100) * totalDuration;
                 
-                // Update count and show results
-                resultsCount.textContent = results.length;
-                
-                if (results.length > 0) {
-                    searchResults.classList.remove('hidden');
-                }
+                // Show time tooltip
+                playhead.setAttribute('title', formatTime(timeAt));
+            });
+            
+            timelineContainer.addEventListener('mouseleave', function() {
+                playhead.classList.add('hidden');
+            });
+            
+            // Check for URL parameters for search
+            const urlParams = new URLSearchParams(window.location.search);
+            const searchParam = urlParams.get('search');
+            if (searchParam) {
+                searchInput.value = searchParam;
+                transcriptSearchInput.value = searchParam;
+                highlightSearchTermInSegments(searchParam);
             }
             
-            // Regular search functionality
-            let searchTimeout;
-            searchInput.addEventListener('input', function() {
-                const searchTerm = this.value.toLowerCase().trim();
+            // Make Summary the active tab by default
+            switchTab('summary');
+        });
+        
+        // Function to switch between tabs
+        function switchTab(tabName) {
+            // Hide all panels
+            document.getElementById('panel-summary').classList.add('hidden');
+            document.getElementById('panel-topics').classList.add('hidden');
+            document.getElementById('panel-insights').classList.add('hidden');
+            
+            // Reset all tab buttons
+            document.getElementById('tab-summary').classList.remove('border-primary-500', 'text-primary-300');
+            document.getElementById('tab-summary').classList.add('border-transparent', 'text-gray-400');
+            document.getElementById('tab-topics').classList.remove('border-primary-500', 'text-primary-300');
+            document.getElementById('tab-topics').classList.add('border-transparent', 'text-gray-400');
+            document.getElementById('tab-insights').classList.remove('border-primary-500', 'text-primary-300');
+            document.getElementById('tab-insights').classList.add('border-transparent', 'text-gray-400');
+            
+            // Show selected panel and active tab
+            document.getElementById(`panel-${tabName}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabName}`).classList.remove('border-transparent', 'text-gray-400');
+            document.getElementById(`tab-${tabName}`).classList.add('border-primary-500', 'text-primary-300');
+        }
+        
+        // Function to jump to a specific segment in the transcript
+        function jumpToSegment(index) {
+            if (currentSegmentIndex >= 0) {
+                document.getElementById('segment-' + currentSegmentIndex).classList.remove('bg-dark-800/50');
+                document.querySelectorAll('.timeline-segment')[currentSegmentIndex].classList.remove('active');
+            }
+            
+            currentSegmentIndex = index;
+            const segment = segments[index];
+            
+            document.getElementById('segment-' + index).classList.add('bg-dark-800/50');
+            document.querySelectorAll('.timeline-segment')[index].classList.add('active');
+            document.getElementById('current-time').textContent = formatTime(segment.start);
+            
+            const segmentElement = document.getElementById('segment-' + index);
+            const transcriptContent = document.getElementById('transcript-content');
+            if (segmentElement) {
+                // Calculate the scroll position to center the segment in view
+                const segmentTop = segmentElement.offsetTop;
+                const containerHeight = transcriptContent.clientHeight;
+                const segmentHeight = segmentElement.clientHeight;
                 
-                // Clear existing highlights
-                document.querySelectorAll('.segment-text').forEach((el, index) => {
-                    el.textContent = segments[index].text;
+                // Scroll to position (subtracting a small offset to show some context)
+                transcriptContent.scrollTop = segmentTop - (containerHeight / 2) + (segmentHeight / 2);
+            }
+            
+            document.getElementById('timeline-progress').style.width = (segment.start / segments[segments.length - 1].end * 100) + '%';
+        }
+        
+        // Handle search functionality
+        // Handle search functionality
+        function highlightSearchTermInSegments(searchTerm) {
+            // Clear previous highlighting
+            document.querySelectorAll('.segment-text').forEach(function(el, index) {
+                el.textContent = segments[index].text;
+            });
+            
+            if (searchTerm.length < 2) {
+                searchResults.classList.add('hidden');
+                return;
+            }
+            
+            // Search in segments and highlight matches
+            const results = [];
+            segments.forEach(function(segment, index) {
+                const segmentText = segment.text.toLowerCase();
+                if (segmentText.includes(searchTerm)) {
+                    // Highlight the text
+                    const segmentEl = document.querySelectorAll('.segment-text')[index];
+                    const regex = new RegExp('(' + searchTerm + ')', 'gi');
+                    segmentEl.innerHTML = segment.text.replace(regex, '<span class="bg-primary-900/70 text-primary-200 px-0.5 rounded">$1</span>');
+                    
+                    // Add to results
+                    results.push({
+                        index: index,
+                        text: segment.text,
+                        start: segment.start
+                    });
+                }
+            });
+            
+            // Update results list
+            resultsList.innerHTML = '';
+            results.forEach(function(result) {
+                const item = document.createElement('li');
+                item.className = 'p-2 rounded-lg hover:bg-dark-900/50 cursor-pointer transition-colors';
+                
+                const time = document.createElement('div');
+                time.className = 'text-xs text-primary-400 font-medium';
+                time.textContent = formatTime(result.start);
+                
+                const text = document.createElement('p');
+                text.className = 'text-sm';
+                const regex = new RegExp('(' + searchTerm + ')', 'gi');
+                text.innerHTML = result.text.replace(regex, '<span class="bg-primary-900/70 text-primary-200 px-0.5 rounded">$1</span>');
+                
+                item.appendChild(time);
+                item.appendChild(text);
+                
+                item.addEventListener('click', function() {
+                    jumpToSegment(result.index);
                 });
                 
-                // Clear previous timeout
-                clearTimeout(searchTimeout);
-                
-                if (searchTerm.length < 2) {
-                    searchResults.classList.add('hidden');
-                    return;
-                }
-                
-                // Add a slight delay for better performance
-                searchTimeout = setTimeout(() => {
-                    // Search in segments and highlight matches
-                    const results = highlightSearchTermInSegments(searchTerm);
-                    
-                    // Update results list
-                    resultsList.innerHTML = '';
-                    results.forEach(result => {
-                        const item = document.createElement('li');
-                        item.className = 'p-2 rounded-lg hover:bg-dark-900 cursor-pointer';
-                        
-                        const time = document.createElement('div');
-                        time.className = 'text-xs text-primary-400';
-                        time.textContent = formatTime(result.start);
-                        
-                        // Get the text with highlighted search term
-                        const textEl = document.createElement('p');
-                        textEl.className = 'text-sm';
-                        
-                        const regex = new RegExp(`(${searchTerm})`, 'gi');
-                        const highlightedText = result.text.replace(regex, '<span class="bg-primary-900 text-primary-200">$1</span>');
-                        textEl.innerHTML = highlightedText;
-                        
-                        item.appendChild(time);
-                        item.appendChild(textEl);
-                        
-                        item.addEventListener('click', () => {
-                            jumpToSegment(result.index);
-                        });
-                        
-                        resultsList.appendChild(item);
-                    });
-                    
-                    // Update count and show results
-                    resultsCount.textContent = results.length;
-                    
-                    if (results.length > 0) {
-                        searchResults.classList.remove('hidden');
-                    } else {
-                        searchResults.classList.add('hidden');
-                    }
-                }, 300);
+                resultsList.appendChild(item);
             });
-        });
+            
+            // Update count and show results
+            resultsCount.textContent = results.length;
+            
+            if (results.length > 0) {
+                searchResults.classList.remove('hidden');
+            } else {
+                searchResults.classList.add('hidden');
+            }
+        }
+        
+        // Function to format time from seconds to minutes:seconds
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return mins + ':' + secs.toString().padStart(2, '0');
+        }
+        
+        // Function to open video location
+        function openVideoLocation() {
+            alert('Video file location: {{ transcript.filepath }}');
+        }
+        
+        // Function to delete transcript
+        function deleteTranscript() {
+            document.getElementById('delete-modal').classList.remove('hidden');
+        }
+        
+        // Function to format LLM output (convert newlines to HTML, handle bullet points, etc.)
+        function formatOutput(text) {
+            if (!text) return '';
+            
+            // Convert newlines to <br>
+            let formatted = text.replace(/\n/g, '<br>');
+            
+            // Handle bullet points (lines starting with - or *)
+            formatted = formatted.replace(/(?:<br>|^)([\s]*[-*][\s]+)(.+?)(?=<br>|$)/g, '<br><span class="inline-block w-2 h-2 bg-primary-400 rounded-full mr-2"></span>$2');
+            
+            return formatted;
+        }
+        
+        // Function to show toast notifications
+        function showNotification(message, isError = false) {
+            const toast = document.getElementById('notification-toast');
+            const toastMessage = document.getElementById('notification-message');
+            
+            toastMessage.textContent = message;
+            
+            if (isError) {
+                toast.classList.remove('bg-primary-900/80', 'text-primary-200');
+                toast.classList.add('bg-red-900/80', 'text-red-200');
+            } else {
+                toast.classList.remove('bg-red-900/80', 'text-red-200');
+                toast.classList.add('bg-primary-900/80', 'text-primary-200');
+            }
+            
+            // Show the toast
+            toast.classList.remove('translate-y-10', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            
+            // Hide after 3 seconds
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-10', 'opacity-0');
+            }, 3000);
+        }
+        
+        // Function to copy segment text
+        function copySegmentText(index) {
+            const text = segments[index].text;
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    showNotification('Segment text copied to clipboard');
+                })
+                .catch(err => {
+                    console.error('Could not copy text: ', err);
+                    showNotification('Failed to copy text', true);
+                });
+        }
+        
+        // Function to toggle between normal and condensed views
+        function toggleTranscriptView() {
+            const transcriptContent = document.getElementById('transcript-content');
+            const segments = document.querySelectorAll('.segment');
+            const viewModeButton = document.getElementById('view-mode-toggle');
+            const viewModeText = document.getElementById('view-mode-text');
+            
+            // Check current mode
+            const isCondensed = transcriptContent.classList.contains('condensed-view');
+            
+            if (isCondensed) {
+                // Switch to normal view
+                transcriptContent.classList.remove('condensed-view');
+                segments.forEach(segment => {
+                    segment.classList.remove('condensed');
+                    segment.classList.remove('py-1', 'px-2', 'mb-1');
+                    segment.classList.add('mb-3', 'p-3');
+                });
+                viewModeText.textContent = 'Condensed';
+            } else {
+                // Switch to condensed view
+                transcriptContent.classList.add('condensed-view');
+                segments.forEach(segment => {
+                    segment.classList.add('condensed');
+                    segment.classList.remove('mb-3', 'p-3');
+                    segment.classList.add('py-1', 'px-2', 'mb-1');
+                });
+                viewModeText.textContent = 'Normal';
+            }
+        }
     </script>
 </body>
 </html>

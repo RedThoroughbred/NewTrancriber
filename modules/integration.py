@@ -186,6 +186,10 @@ def register_llm_routes(app: Flask) -> None:
             
         with open(transcript_path, 'r') as f:
             transcript_data = json.load(f)
+        
+        # Check if summary already exists
+        if 'summary' in transcript_data and transcript_data['summary']:
+            return jsonify({"summary": transcript_data['summary'], "cached": True})
             
         # Generate summary
         summary = summarize.summarize_transcript(transcript_data['transcript'])
@@ -193,7 +197,7 @@ def register_llm_routes(app: Flask) -> None:
         if not summary:
             return jsonify({"error": "Failed to generate summary"}), 500
             
-        return jsonify({"summary": summary})
+        return jsonify({"summary": summary, "cached": False})
     
     @app.route('/api/transcripts/<transcript_id>/topics', methods=['GET'])
     def get_transcript_topics(transcript_id):
@@ -212,6 +216,10 @@ def register_llm_routes(app: Flask) -> None:
             
         with open(transcript_path, 'r') as f:
             transcript_data = json.load(f)
+        
+        # Check if topics already exist
+        if 'topics' in transcript_data and transcript_data['topics']:
+            return jsonify({"topics": transcript_data['topics'], "cached": True})
             
         # Extract topics
         topics = summarize.extract_topics(transcript_data['transcript'])
@@ -219,7 +227,7 @@ def register_llm_routes(app: Flask) -> None:
         if topics is None:
             return jsonify({"error": "Failed to extract topics"}), 500
             
-        return jsonify({"topics": topics})
+        return jsonify({"topics": topics, "cached": False})
     
     @app.route('/api/transcripts/<transcript_id>/ask', methods=['POST'])
     def ask_transcript_question(transcript_id):
@@ -252,6 +260,209 @@ def register_llm_routes(app: Flask) -> None:
             return jsonify({"error": "Failed to answer question"}), 500
             
         return jsonify({"answer": answer})
+        
+    @app.route('/api/transcripts/<transcript_id>/action-items', methods=['GET'])
+    def get_transcript_action_items(transcript_id):
+        """Extract action items from a transcript using LLM"""
+        import json
+        import os
+        
+        # Get transcript data
+        transcript_path = os.path.join(
+            app.config['TRANSCRIPT_FOLDER'], 
+            f"{transcript_id}.json"
+        )
+        
+        if not os.path.exists(transcript_path):
+            return jsonify({"error": "Transcript not found"}), 404
+            
+        with open(transcript_path, 'r') as f:
+            transcript_data = json.load(f)
+        
+        # Check if action items already exist
+        if 'action_items' in transcript_data and transcript_data['action_items']:
+            return jsonify({
+                "action_items": transcript_data['action_items'],
+                "cached": True
+            })
+            
+        # Extract action items
+        result = summarize.extract_action_items(transcript_data['transcript'])
+        
+        if result is None or 'action_items' not in result:
+            return jsonify({"error": "Failed to extract action items"}), 500
+            
+        return jsonify({
+            "action_items": result['action_items'],
+            "cached": False
+        })
+        
+    @app.route('/api/transcripts/<transcript_id>/save-action-items', methods=['POST'])
+    def save_transcript_action_items(transcript_id):
+        """Save action items to the transcript file"""
+        import json
+        import os
+        
+        data = request.json
+        action_items = data.get('action_items', [])
+        
+        # Get transcript data
+        transcript_path = os.path.join(
+            app.config['TRANSCRIPT_FOLDER'], 
+            f"{transcript_id}.json"
+        )
+        
+        if not os.path.exists(transcript_path):
+            return jsonify({"error": "Transcript not found"}), 404
+            
+        # Read existing data
+        with open(transcript_path, 'r') as f:
+            transcript_data = json.load(f)
+            
+        # Add action items
+        transcript_data['action_items'] = action_items
+        
+        # Save updated data
+        with open(transcript_path, 'w') as f:
+            json.dump(transcript_data, f)
+            
+        return jsonify({"success": True})
+    
+    @app.route('/api/transcripts/<transcript_id>/save-summary', methods=['POST'])
+    def save_transcript_summary(transcript_id):
+        """Save a generated summary to the transcript file"""
+        import json
+        import os
+        
+        data = request.json
+        summary = data.get('summary', '')
+        
+        if not summary:
+            return jsonify({"error": "No summary provided"}), 400
+            
+        # Get transcript data
+        transcript_path = os.path.join(
+            app.config['TRANSCRIPT_FOLDER'], 
+            f"{transcript_id}.json"
+        )
+        
+        if not os.path.exists(transcript_path):
+            return jsonify({"error": "Transcript not found"}), 404
+            
+        # Read existing data
+        with open(transcript_path, 'r') as f:
+            transcript_data = json.load(f)
+            
+        # Add summary
+        transcript_data['summary'] = summary
+        
+        # Save updated data
+        with open(transcript_path, 'w') as f:
+            json.dump(transcript_data, f)
+            
+        return jsonify({"success": True})
+
+    @app.route('/api/transcripts/<transcript_id>/edit-summary', methods=['POST'])
+    def edit_transcript_summary(transcript_id):
+        """Edit a summary in the transcript file"""
+        import json
+        import os
+        
+        data = request.json
+        summary = data.get('summary', '')
+        
+        # Get transcript data
+        transcript_path = os.path.join(
+            app.config['TRANSCRIPT_FOLDER'], 
+            f"{transcript_id}.json"
+        )
+        
+        if not os.path.exists(transcript_path):
+            return jsonify({"error": "Transcript not found"}), 404
+            
+        # Read existing data
+        with open(transcript_path, 'r') as f:
+            transcript_data = json.load(f)
+            
+        # Update summary (or remove it if empty)
+        if summary:
+            transcript_data['summary'] = summary
+        elif 'summary' in transcript_data:
+            del transcript_data['summary']
+        
+        # Save updated data
+        with open(transcript_path, 'w') as f:
+            json.dump(transcript_data, f)
+            
+        return jsonify({"success": True})
+        
+    @app.route('/api/transcripts/<transcript_id>/save-topics', methods=['POST'])
+    def save_transcript_topics(transcript_id):
+        """Save generated topics to the transcript file"""
+        import json
+        import os
+        
+        data = request.json
+        topics = data.get('topics', [])
+        
+        if not topics:
+            return jsonify({"error": "No topics provided"}), 400
+            
+        # Get transcript data
+        transcript_path = os.path.join(
+            app.config['TRANSCRIPT_FOLDER'], 
+            f"{transcript_id}.json"
+        )
+        
+        if not os.path.exists(transcript_path):
+            return jsonify({"error": "Transcript not found"}), 404
+            
+        # Read existing data
+        with open(transcript_path, 'r') as f:
+            transcript_data = json.load(f)
+            
+        # Add topics
+        transcript_data['topics'] = topics
+        
+        # Save updated data
+        with open(transcript_path, 'w') as f:
+            json.dump(transcript_data, f)
+            
+        return jsonify({"success": True})
+        
+    @app.route('/api/transcripts/<transcript_id>/edit-topics', methods=['POST'])
+    def edit_transcript_topics(transcript_id):
+        """Edit topics in the transcript file"""
+        import json
+        import os
+        
+        data = request.json
+        topics = data.get('topics', [])
+        
+        # Get transcript data
+        transcript_path = os.path.join(
+            app.config['TRANSCRIPT_FOLDER'], 
+            f"{transcript_id}.json"
+        )
+        
+        if not os.path.exists(transcript_path):
+            return jsonify({"error": "Transcript not found"}), 404
+            
+        # Read existing data
+        with open(transcript_path, 'r') as f:
+            transcript_data = json.load(f)
+            
+        # Update topics (or remove them if empty)
+        if topics:
+            transcript_data['topics'] = topics
+        elif 'topics' in transcript_data:
+            del transcript_data['topics']
+        
+        # Save updated data
+        with open(transcript_path, 'w') as f:
+            json.dump(transcript_data, f)
+            
+        return jsonify({"success": True})
     
     @app.route('/api/llm/status', methods=['GET'])
     def get_llm_status():

@@ -1,0 +1,8 @@
+I've tried several approaches to fix the tab buttons, but there appears to be a more fundamental issue with the modified template. Since we have a backup of the original working file, let's revert all our changes and try a simpler approach:
+
+1. Keep the original layout but just rearrange the sections
+2. Move the search to the top of the sidebar where it's always visible
+3. Group the AI tools together in a logical way
+4. Make the transcript area taller
+
+This will preserve all existing functionality without introducing potential bugs.

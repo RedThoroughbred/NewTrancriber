@@ -1,0 +1,104 @@
+version: '3.5'
+
+services:
+  # ETCD, MinIO, Milvus Standalone (unchanged except removing unnecessary Ollama port)
+  etcd:
+    container_name: milvus-etcd
+    image: quay.io/coreos/etcd:v3.5.5
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+    volumes:
+      - ./volumes/etcd:/etcd
+    command: >
+      etcd
+      -advertise-client-urls=http://127.0.0.1:2379
+      -listen-client-urls http://0.0.0.0:2379
+      --data-dir /etcd
+    networks:
+      - milvus-net
+
+  minio:
+    container_name: milvus-minio
+    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - ./volumes/minio:/minio_data
+    command: >
+      minio server /minio_data
+      --console-address ":9001"
+    networks:
+      - milvus-net
+
+  standalone:
+    container_name: milvus-standalone
+    image: milvusdb/milvus:v2.4.21
+    command: ["milvus", "run", "standalone"]
+    environment:
+      - ETCD_ENDPOINTS=etcd:2379
+      - MINIO_ADDRESS=minio:9000
+      - COMMON.QUERYNODE.GRPC.SERVER_LISTENING_HOST=0.0.0.0
+      - HOST=0.0.0.0
+      - COMMON.PROXY.GRPC.SERVER_LISTENING_HOST=0.0.0.0
+      - PROXY.GRPC.SERVER_LISTENING_HOST=0.0.0.0
+    volumes:
+      - ./volumes/milvus:/var/lib/milvus
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+      # Removed 11434:11434 since Ollama isn’t here
+    depends_on:
+      - etcd
+      - minio
+    networks:
+      - milvus-net
+
+  # Open WebUI (updated to point to host’s Ollama)
+  open-webui:
+    container_name: open-webui
+    image: ghcr.io/open-webui/open-webui:0.5.18
+    volumes:
+      - ./volumes/open-webui:/app/backend/data
+    environment:
+      - OLLAMA_API_BASE_URL=http://host.docker.internal:11434  # Points to host’s Ollama
+      - OLLAMA_MODEL_LIST=gemma:2b
+      - DEFAULT_MODELS=gemma:2b
+      - ENABLE_OLLAMA_API=true
+      - LOG_LEVEL=debug
+      - WEBUI_HOST=0.0.0.0
+      - WEBUI_PORT=8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - standalone  # Kept this, but it’s not strictly needed for Ollama
+    networks:
+      - milvus-net
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Maps host.docker.internal to your host
+    healthcheck:
+      test: [
+        "CMD-SHELL",
+        "curl --silent --fail http://localhost:${PORT:-8080}/health | jq -ne 'input.status == true' || exit 1"
+      ]
+
+  # Milvus Insight (unchanged)
+  attu:
+    container_name: milvus-attu
+    image: zilliz/attu:latest
+    ports:
+      - "8090:3000"
+    environment:
+      - MILVUS_URL=milvus-standalone:19530
+    depends_on:
+      - standalone
+    networks:
+      - milvus-net
+    restart: always
+
+networks:
+  milvus-net:
+    driver: bridge
