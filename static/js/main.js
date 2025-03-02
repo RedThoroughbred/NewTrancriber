@@ -1,10 +1,33 @@
+// Stripped-down theme toggle function
+function toggleTheme() {
+    if (document.body.classList.contains('light-mode')) {
+        // Switch to dark mode
+        document.body.classList.remove('light-mode');
+        document.body.classList.add('dark-mode');
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme', 'dark');
+    } else {
+        // Switch to light mode
+        document.body.classList.remove('dark-mode');
+        document.body.classList.add('light-mode');
+        document.documentElement.setAttribute('data-theme', 'light');
+        localStorage.setItem('theme', 'light');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Dark mode toggle
-    const darkModeToggle = document.getElementById('dark-mode-toggle');
-    if (darkModeToggle) {
-        darkModeToggle.addEventListener('click', function() {
-            document.body.classList.toggle('dark-mode');
-        });
+    // Load theme preference
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    
+    // Apply theme
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-mode');
+        document.body.classList.remove('dark-mode');
+        document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+        document.body.classList.add('dark-mode');
+        document.body.classList.remove('light-mode');
+        document.documentElement.setAttribute('data-theme', 'dark');
     }
     
     // Initialize tabs

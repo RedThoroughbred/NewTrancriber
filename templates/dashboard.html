@@ -42,14 +42,14 @@
         }
     </style>
 </head>
-<body class="bg-dark-900 text-white min-h-screen">
+<body class="min-h-screen bg-gray-50 text-gray-800">
     <!-- Delete Confirmation Modal -->
-    <div id="delete-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-dark-800 rounded-lg shadow-lg max-w-md w-full p-6">
-            <h3 class="text-lg font-medium mb-4">Confirm Deletion</h3>
-            <p class="text-gray-300 mb-6">Are you sure you want to delete "<span id="delete-transcript-title"></span>"? This action cannot be undone.</p>
+    <div id="delete-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <h3 class="text-xl font-medium mb-4 text-gray-800">Confirm Deletion</h3>
+            <p class="text-gray-600 mb-6">Are you sure you want to delete "<span id="delete-transcript-title"></span>"? This action cannot be undone.</p>
             <div class="flex justify-end space-x-4">
-                <button id="cancel-delete" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition">Cancel</button>
+                <button id="cancel-delete" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition border border-gray-300">Cancel</button>
                 <button id="confirm-delete" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">Delete</button>
             </div>
         </div>
@@ -57,9 +57,9 @@
 
     <div class="container mx-auto px-4 py-8">
         <header class="flex justify-between items-center mb-12">
-            <h1 class="text-3xl font-bold text-primary-400">Video Transcriber</h1>
-            <nav>
-                <a href="/" class="text-primary-300 hover:text-primary-400 transition">Home</a>
+            <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-500 to-blue-700 bg-clip-text text-transparent">Video Transcriber</h1>
+            <nav class="flex items-center space-x-4">
+                <a href="/" class="text-blue-600 hover:text-blue-800 transition">Home</a>
             </nav>
         </header>
 
@@ -69,26 +69,26 @@
                     <h2 class="text-2xl font-semibold">Transcript Dashboard</h2>
                     <div class="flex items-center space-x-4">
                         <!-- View toggle buttons -->
-                        <div class="bg-dark-800 rounded-lg flex overflow-hidden">
-                            <button id="table-view-btn" class="px-3 py-1.5 text-sm font-medium bg-primary-600 text-white">
+                        <div class="bg-gray-100 rounded-lg flex overflow-hidden border border-gray-300">
+                            <button id="table-view-btn" class="px-3 py-1.5 text-sm font-medium bg-blue-600 text-white">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                 </svg>
                             </button>
-                            <button id="card-view-btn" class="px-3 py-1.5 text-sm font-medium text-gray-300 hover:bg-dark-700">
+                            <button id="card-view-btn" class="px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                                 </svg>
                             </button>
                         </div>
                         
-                        <a href="/" class="bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition">
+                        <a href="/" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition">
                             New Transcription
                         </a>
                     </div>
                 </div>
 
-                <div class="bg-dark-800 rounded-xl p-6 shadow-lg">
+                <div class="bg-white rounded-xl p-6 shadow-lg">
                     <div class="mb-6">
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -96,7 +96,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                 </svg>
                             </div>
-                            <input type="text" id="search" class="w-full pl-10 pr-4 py-2 bg-dark-900 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent" placeholder="Search across all transcripts...">
+                            <input type="text" id="search" class="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800" placeholder="Search across all transcripts...">
                         </div>
                         
                         <!-- Global Search Results -->
@@ -109,7 +109,7 @@
                                     </svg>
                                 </button>
                             </div>
-                            <div id="search-results-container" class="bg-dark-900 rounded-lg p-4 max-h-96 overflow-y-auto divide-y divide-gray-700">
+                            <div id="search-results-container" class="bg-gray-100 rounded-lg p-4 max-h-96 overflow-y-auto divide-y divide-gray-300">
                                 <!-- Results will be added here -->
                             </div>
                         </div>
@@ -119,25 +119,25 @@
                     <!-- Table View -->
                     <div id="table-view" class="overflow-x-auto">
                         <table class="w-full text-left">
-                            <thead class="border-b border-gray-700">
+                            <thead class="border-b border-gray-300">
                                 <tr>
-                                    <th class="pb-3 pt-6 px-4 text-primary-300">Title</th>
-                                    <th class="pb-3 pt-6 px-4 text-primary-300">Topic</th>
-                                    <th class="pb-3 pt-6 px-4 text-primary-300">Date</th>
-                                    <th class="pb-3 pt-6 px-4 text-primary-300">Summary</th>
-                                    <th class="pb-3 pt-6 px-4 text-primary-300">Actions</th>
+                                    <th class="pb-3 pt-6 px-4 text-blue-600">Title</th>
+                                    <th class="pb-3 pt-6 px-4 text-blue-600">Topic</th>
+                                    <th class="pb-3 pt-6 px-4 text-blue-600">Date</th>
+                                    <th class="pb-3 pt-6 px-4 text-blue-600">Summary</th>
+                                    <th class="pb-3 pt-6 px-4 text-blue-600">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="transcript-table" class="divide-y divide-gray-700">
+                            <tbody id="transcript-table" class="divide-y divide-gray-200">
                                 {% for transcript in transcripts %}
-                                <tr class="transcript-row hover:bg-dark-900 transition">
+                                <tr class="transcript-row hover:bg-gray-100 transition">
                                     <td class="py-4 px-4">
                                         <div class="font-medium truncate max-w-xs" title="{{ transcript.title }}">{{ transcript.title }}</div>
-                                        <div class="text-sm text-gray-400 truncate max-w-xs" title="{{ transcript.original_filename }}">{{ transcript.original_filename }}</div>
+                                        <div class="text-sm text-gray-500 truncate max-w-xs" title="{{ transcript.original_filename }}">{{ transcript.original_filename }}</div>
                                     </td>
                                     <td class="py-4 px-4">
                                         {% if transcript.topic %}
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-900 text-primary-300 truncate max-w-[150px]" title="{{ transcript.topic }}">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 truncate max-w-[150px]" title="{{ transcript.topic }}">
                                             {{ transcript.topic }}
                                         </span>
                                         {% else %}
@@ -147,7 +147,7 @@
                                         {% if transcript.topics is defined and transcript.topics %}
                                         <div class="mt-2 flex flex-wrap gap-1">
                                             {% for topic in transcript.topics[:2] %}
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-dark-900 text-primary-300 truncate max-w-[100px]" title="{{ topic.name }}">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 truncate max-w-[100px]" title="{{ topic.name }}">
                                                 {{ topic.name }}
                                             </span>
                                             {% endfor %}
@@ -157,12 +157,12 @@
                                         </div>
                                         {% endif %}
                                     </td>
-                                    <td class="py-4 px-4 text-gray-300 whitespace-nowrap">
-                                        {{ transcript.date.split('T')[0] }}
+                                    <td class="py-4 px-4 text-gray-600 whitespace-nowrap">
+                                        {{ transcript.date.split('T')[0] if transcript.date else 'N/A' }}
                                     </td>
                                     <td class="py-4 px-4 w-60">
                                         {% if transcript.summary %}
-                                        <div class="text-sm text-gray-300 line-clamp-2 overflow-hidden" title="{{ transcript.summary }}">
+                                        <div class="text-sm text-gray-600 line-clamp-2 overflow-hidden" title="{{ transcript.summary }}">
                                             {{ transcript.summary|replace('\n', ' ')|truncate(100) }}
                                         </div>
                                         {% else %}
@@ -171,10 +171,10 @@
                                     </td>
                                     <td class="py-4 px-4 whitespace-nowrap">
                                         <div class="flex space-x-3">
-                                            <a href="/transcript/{{ transcript.id }}" class="text-primary-400 hover:text-primary-300">View</a>
-                                            <a href="/download/{{ transcript.id }}" class="text-primary-400 hover:text-primary-300">Download</a>
+                                            <a href="/transcript/{{ transcript.id }}" class="text-blue-600 hover:text-blue-800 transition">View</a>
+                                            <a href="/download/{{ transcript.id }}" class="text-blue-600 hover:text-blue-800 transition">Download</a>
                                             <button 
-                                                class="text-red-400 hover:text-red-300 delete-btn" 
+                                                class="text-red-600 hover:text-red-700 transition delete-btn" 
                                                 data-id="{{ transcript.id }}"
                                                 data-title="{{ transcript.title }}"
                                             >Delete</button>
@@ -190,34 +190,34 @@
                     <div id="card-view" class="hidden">
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {% for transcript in transcripts %}
-                            <div class="bg-dark-900 rounded-lg overflow-hidden shadow-lg transition hover:shadow-xl">
+                            <div class="bg-white rounded-lg overflow-hidden shadow-lg transition hover:shadow-xl">
                                 <div class="p-5">
                                     <!-- Card header -->
                                     <div class="mb-3">
                                         <h3 class="font-medium text-lg truncate" title="{{ transcript.title }}">{{ transcript.title }}</h3>
-                                        <p class="text-sm text-gray-400 truncate" title="{{ transcript.original_filename }}">{{ transcript.original_filename }}</p>
+                                        <p class="text-sm text-gray-500 truncate" title="{{ transcript.original_filename }}">{{ transcript.original_filename }}</p>
                                     </div>
                                     
                                     <!-- Date & Duration -->
                                     <div class="flex justify-between items-center mb-3">
-                                        <div class="text-sm text-gray-300">{{ transcript.date.split('T')[0] }}</div>
+                                        <div class="text-sm text-gray-600">{{ transcript.date.split('T')[0] }}</div>
                                         
                                         {% if transcript.topics is defined and transcript.topics %}
-                                        <span class="text-xs text-primary-400">{{ transcript.topics|length }} topics</span>
+                                        <span class="text-xs text-blue-600">{{ transcript.topics|length }} topics</span>
                                         {% endif %}
                                     </div>
                                     
                                     <!-- Topic tags -->
                                     <div class="mb-3 flex flex-wrap gap-1">
                                         {% if transcript.topic %}
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-900 text-primary-300 truncate max-w-[120px]" title="{{ transcript.topic }}">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 truncate max-w-[120px]" title="{{ transcript.topic }}">
                                             {{ transcript.topic }}
                                         </span>
                                         {% endif %}
                                         
                                         {% if transcript.topics is defined and transcript.topics %}
                                             {% for topic in transcript.topics[:2] %}
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-dark-800 text-primary-300 truncate max-w-[100px]" title="{{ topic.name }}">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 truncate max-w-[100px]" title="{{ topic.name }}">
                                                 {{ topic.name }}
                                             </span>
                                             {% endfor %}
@@ -226,9 +226,9 @@
                                     
                                     <!-- Summary -->
                                     <div class="mb-5">
-                                        <p class="text-xs text-primary-400 mb-1">Summary</p>
+                                        <p class="text-xs text-blue-600 mb-1">Summary</p>
                                         {% if transcript.summary %}
-                                        <div class="text-sm text-gray-300 line-clamp-2 h-10 overflow-hidden" title="{{ transcript.summary }}">
+                                        <div class="text-sm text-gray-600 line-clamp-2 h-10 overflow-hidden" title="{{ transcript.summary }}">
                                             {{ transcript.summary|replace('\n', ' ')|truncate(100) }}
                                         </div>
                                         {% else %}
@@ -238,15 +238,15 @@
                                     
                                     <!-- Actions -->
                                     <div class="flex justify-between">
-                                        <a href="/transcript/{{ transcript.id }}" class="bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium py-1.5 px-3 rounded transition">
+                                        <a href="/transcript/{{ transcript.id }}" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-1.5 px-3 rounded transition">
                                             View
                                         </a>
                                         <div class="flex space-x-2">
-                                            <a href="/download/{{ transcript.id }}" class="bg-dark-800 hover:bg-dark-700 text-sm font-medium py-1.5 px-3 rounded transition">
+                                            <a href="/download/{{ transcript.id }}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium py-1.5 px-3 rounded transition border border-gray-300">
                                                 Download
                                             </a>
                                             <button 
-                                                class="bg-red-900 hover:bg-red-800 text-red-300 text-sm font-medium py-1.5 px-3 rounded transition delete-btn" 
+                                                class="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-1.5 px-3 rounded transition delete-btn" 
                                                 data-id="{{ transcript.id }}"
                                                 data-title="{{ transcript.title }}"
                                             >Delete</button>
@@ -277,6 +277,7 @@
         </main>
     </div>
 
+    <script src="/static/js/main.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.getElementById('search');
@@ -298,10 +299,10 @@
             if (savedView === 'card') {
                 tableView.classList.add('hidden');
                 cardView.classList.remove('hidden');
-                tableViewBtn.classList.remove('bg-primary-600', 'text-white');
-                tableViewBtn.classList.add('text-gray-300', 'hover:bg-dark-700');
-                cardViewBtn.classList.remove('text-gray-300', 'hover:bg-dark-700');
-                cardViewBtn.classList.add('bg-primary-600', 'text-white');
+                tableViewBtn.classList.remove('bg-blue-600', 'text-white');
+                tableViewBtn.classList.add('text-gray-700', 'hover:bg-gray-200');
+                cardViewBtn.classList.remove('text-gray-700', 'hover:bg-gray-200');
+                cardViewBtn.classList.add('bg-blue-600', 'text-white');
             }
             
             // Switch to table view
@@ -310,10 +311,10 @@
                 cardView.classList.add('hidden');
                 
                 // Update buttons
-                tableViewBtn.classList.add('bg-primary-600', 'text-white');
-                tableViewBtn.classList.remove('text-gray-300', 'hover:bg-dark-700');
-                cardViewBtn.classList.add('text-gray-300', 'hover:bg-dark-700');
-                cardViewBtn.classList.remove('bg-primary-600', 'text-white');
+                tableViewBtn.classList.add('bg-blue-600', 'text-white');
+                tableViewBtn.classList.remove('text-gray-700', 'hover:bg-gray-200');
+                cardViewBtn.classList.add('text-gray-700', 'hover:bg-gray-200');
+                cardViewBtn.classList.remove('bg-blue-600', 'text-white');
                 
                 // Save preference
                 localStorage.setItem('preferredView', 'table');
@@ -325,10 +326,10 @@
                 cardView.classList.remove('hidden');
                 
                 // Update buttons
-                tableViewBtn.classList.remove('bg-primary-600', 'text-white');
-                tableViewBtn.classList.add('text-gray-300', 'hover:bg-dark-700');
-                cardViewBtn.classList.remove('text-gray-300', 'hover:bg-dark-700');
-                cardViewBtn.classList.add('bg-primary-600', 'text-white');
+                tableViewBtn.classList.remove('bg-blue-600', 'text-white');
+                tableViewBtn.classList.add('text-gray-700', 'hover:bg-gray-200');
+                cardViewBtn.classList.remove('text-gray-700', 'hover:bg-gray-200');
+                cardViewBtn.classList.add('bg-blue-600', 'text-white');
                 
                 // Save preference
                 localStorage.setItem('preferredView', 'card');
@@ -450,7 +451,7 @@
                                 // Create a link to view at this position
                                 const viewLink = document.createElement('a');
                                 viewLink.href = `/transcript/${result.id}?search=${encodeURIComponent(searchTerm)}`;
-                                viewLink.className = 'text-xs text-primary-400 hover:text-primary-300 block mt-1';
+                                viewLink.className = 'text-xs text-blue-600 hover:text-blue-800 block mt-1';
                                 viewLink.textContent = 'View in transcript';
                                 
                                 snippet.appendChild(viewLink);

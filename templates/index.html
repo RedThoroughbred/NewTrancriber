@@ -44,25 +44,25 @@
         }
     </style>
 </head>
-<body class="bg-dark-900 text-white min-h-screen">
+<body class="min-h-screen bg-gray-50 text-gray-800">
     <div class="container mx-auto px-4 py-8">
         <header class="flex justify-between items-center mb-12">
             <h1 class="text-3xl font-bold text-primary-400">Video Transcriber</h1>
-            <nav>
+            <nav class="flex items-center space-x-4">
                 <a href="/dashboard" class="text-primary-300 hover:text-primary-400 transition">Dashboard</a>
             </nav>
         </header>
 
         <main class="max-w-4xl mx-auto">
-            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                <!-- Left sidebar with intro text -->
-                <div class="lg:col-span-1">
-                    <section class="bg-dark-800 rounded-xl p-4 shadow-lg">
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 md:gap-6">
+                <!-- Left sidebar with intro text - uses CSS variables for theming -->
+                <div class="lg:col-span-1 order-2 lg:order-1">
+                    <section class="glass rounded-xl p-4 shadow-lg">
                         <h2 class="text-xl font-semibold mb-3">Video Transcriber</h2>
-                        <p class="text-gray-400 mb-4 text-sm">Transform videos to text with AI-powered transcription</p>
+                        <p class="text-secondary mb-4 text-sm">Transform videos to text with AI-powered transcription</p>
                         <div class="border-t border-gray-700 pt-3">
                             <h3 class="text-sm font-medium text-primary-300 mb-2">Features:</h3>
-                            <ul class="text-sm text-gray-400 space-y-2">
+                            <ul class="text-sm text-secondary space-y-2">
                                 <li class="flex items-center">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-primary-400" viewBox="0 0 20 20" fill="currentColor">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
@@ -93,9 +93,9 @@
                 </div>
                 
                 <!-- Main content -->
-                <div class="lg:col-span-4">
-                    <section class="bg-dark-800 rounded-xl p-6 shadow-lg">
-                        <div class="bg-dark-900 rounded-lg p-4 mb-6 border border-gray-700">
+                <div class="lg:col-span-4 order-1 lg:order-2">
+                    <section class="glass rounded-xl p-4 md:p-6 shadow-lg">
+                        <div class="glass rounded-lg p-4 mb-6 border border-gray-700/30">
                             <h3 class="text-lg font-medium mb-2">Choose your source</h3>
                             
                             <div class="flex mb-4">
@@ -134,7 +134,7 @@
                             <div id="youtube-panel" class="hidden">
                                 <div class="mb-4">
                                     <label class="block text-sm font-medium text-gray-400 mb-1" for="youtube-url">Video URL or File Path</label>
-                                    <input type="text" id="youtube-url" placeholder="https://www.youtube.com/watch?v=... or /path/to/video.mp4" class="w-full bg-dark-800 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                                    <input type="text" id="youtube-url" placeholder="https://www.youtube.com/watch?v=... or /path/to/video.mp4" class="w-full border border-gray-700/30 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
                                     <p class="text-sm text-gray-500 mt-1">Paste a YouTube URL or enter a file path to transcribe</p>
                                 </div>
                                 <div class="mb-4">
@@ -164,11 +164,11 @@
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <label class="block text-sm font-medium text-gray-400 mb-1" for="title">Title (Optional)</label>
-                                            <input type="text" id="title" class="w-full bg-dark-900 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                                            <input type="text" id="title" class="w-full border border-gray-700/30 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-gray-400 mb-1" for="topic">Topic (Optional)</label>
-                                            <input type="text" id="topic" class="w-full bg-dark-900 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                                            <input type="text" id="topic" class="w-full border border-gray-700/30 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
                                         </div>
                                     </div>
                                 </div>
@@ -176,7 +176,7 @@
                         </div>
 
                         <div class="flex justify-center">
-                            <button id="transcribe-btn" class="bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-8 rounded-lg transition transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <button id="transcribe-btn" class="bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 sm:py-3 px-6 sm:px-8 rounded-lg transition transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed btn-hover-effect w-full sm:w-auto">
                                 Transcribe Now
                             </button>
                         </div>
@@ -184,25 +184,26 @@
                 </div>
             </div>
 
-            <section id="progress-section" class="hidden bg-dark-800 rounded-xl p-8 shadow-lg mb-12">
+            <section id="progress-section" class="hidden glass rounded-xl p-4 sm:p-8 shadow-lg mb-6 sm:mb-12 mt-6">
                 <h3 class="text-xl font-semibold mb-4">Transcription in Progress</h3>
-                <div class="space-y-6" id="progress-container">
+                <div class="space-y-4 sm:space-y-6" id="progress-container">
                     <!-- Progress bars will be added here -->
                 </div>
             </section>
 
-            <section id="results-section" class="hidden bg-dark-800 rounded-xl p-8 shadow-lg">
+            <section id="results-section" class="hidden glass rounded-xl p-4 sm:p-8 shadow-lg mt-6">
                 <h3 class="text-xl font-semibold mb-4">Transcription Results</h3>
-                <div class="space-y-6" id="results-container">
+                <div class="space-y-4 sm:space-y-6" id="results-container">
                     <!-- Results will be added here -->
                 </div>
                 <div class="mt-8 text-center">
-                    <a href="/dashboard" class="text-primary-400 hover:text-primary-300 font-medium">View All Transcripts</a>
+                    <a href="/dashboard" class="text-primary-400 hover:text-primary-300 font-medium btn-hover-effect inline-block px-4 py-2 rounded-lg">View All Transcripts</a>
                 </div>
             </section>
         </main>
     </div>
 
+    <script src="/static/js/main.js"></script>
     <script>
         // Tab switching function
         function switchTab(tabName) {
