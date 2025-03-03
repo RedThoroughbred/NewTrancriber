@@ -56,7 +56,123 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+    
+    // Multiple transcript selection handlers
+    initMultiTranscriptSelectionHandlers();
 });
+
+// Multiple transcript selection functionality
+function initMultiTranscriptSelectionHandlers() {
+    const selectAllCheckbox = document.getElementById('select-all');
+    const transcriptCheckboxes = document.querySelectorAll('.transcript-select');
+    const multiTranscriptActions = document.getElementById('multi-transcript-actions');
+    const selectedCountElement = document.getElementById('selected-count');
+    const compareTranscriptsBtn = document.getElementById('compare-transcripts-btn');
+    
+    // Skip if we're not on the dashboard page
+    if (!selectAllCheckbox || !multiTranscriptActions) return;
+    
+    // Track selected transcripts
+    let selectedTranscripts = [];
+    
+    // Function to update UI based on selection
+    function updateSelectionUI() {
+        const count = selectedTranscripts.length;
+        
+        // Update counter
+        if (selectedCountElement) {
+            selectedCountElement.textContent = count;
+        }
+        
+        // Show/hide multi-transcript actions
+        if (count >= 2) {
+            multiTranscriptActions.classList.remove('hidden');
+        } else {
+            multiTranscriptActions.classList.add('hidden');
+        }
+        
+        // Update select all checkbox
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = count > 0 && count === transcriptCheckboxes.length;
+            selectAllCheckbox.indeterminate = count > 0 && count < transcriptCheckboxes.length;
+        }
+    }
+    
+    // Handle individual transcript selection
+    transcriptCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const transcriptId = this.dataset.id;
+            const transcriptTitle = this.dataset.title;
+            
+            if (this.checked) {
+                // Add to selected list if not already there
+                if (!selectedTranscripts.some(t => t.id === transcriptId)) {
+                    selectedTranscripts.push({
+                        id: transcriptId,
+                        title: transcriptTitle
+                    });
+                }
+            } else {
+                // Remove from selected list
+                selectedTranscripts = selectedTranscripts.filter(t => t.id !== transcriptId);
+            }
+            
+            // Sync checkboxes with same data-id (table and card views)
+            document.querySelectorAll(`.transcript-select[data-id="${transcriptId}"]`).forEach(cb => {
+                cb.checked = this.checked;
+            });
+            
+            updateSelectionUI();
+        });
+    });
+    
+    // Handle select all checkbox
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            const isChecked = this.checked;
+            
+            transcriptCheckboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+                
+                const transcriptId = checkbox.dataset.id;
+                const transcriptTitle = checkbox.dataset.title;
+                
+                if (isChecked) {
+                    // Add to selected list if not already there
+                    if (!selectedTranscripts.some(t => t.id === transcriptId)) {
+                        selectedTranscripts.push({
+                            id: transcriptId,
+                            title: transcriptTitle
+                        });
+                    }
+                }
+            });
+            
+            if (!isChecked) {
+                // Clear selection if unchecked
+                selectedTranscripts = [];
+            }
+            
+            updateSelectionUI();
+        });
+    }
+    
+    // Compare transcripts button handler
+    if (compareTranscriptsBtn) {
+        compareTranscriptsBtn.addEventListener('click', function() {
+            if (selectedTranscripts.length < 2) {
+                alert('Please select at least 2 transcripts to compare');
+                return;
+            }
+            
+            // Get selected transcript IDs
+            const transcriptIds = selectedTranscripts.map(t => t.id).join(',');
+            
+            // Navigate to compare page
+            window.location.href = `/compare-transcripts?ids=${transcriptIds}`;
+        });
+    }
+}
 
 // YouTube URL validation
 function validateYoutubeUrl(url) {

@@ -432,7 +432,7 @@
                                                                     {{ decision.impact }}
                                                                 </span>
                                                             </div>
-                                                            <div><span class="text-gray-500">Stakeholders:</span> {{ decision.stakeholders|join(', ') }}</div>
+                                                            <div><span class="text-gray-500">Stakeholders:</span> {{ decision.stakeholders|join(', ') if decision.stakeholders else 'None' }}</div>
                                                             {% if decision.next_steps %}
                                                             <div class="w-full mt-1"><span class="text-gray-500">Next Steps:</span> {{ decision.next_steps }}</div>
                                                             {% endif %}
