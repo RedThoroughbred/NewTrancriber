@@ -342,7 +342,7 @@ def extract_commitments(transcript_text: str) -> dict:
         print(f"Error extracting commitments: {e}")
         return {"commitments": []}
 
-# Multi-transcript analysis prompts - IMPROVED FOR EXECUTIVES
+# Multi-transcript analysis prompts
 COMPARATIVE_SUMMARY_PROMPT = """
 You are a Chief of Staff preparing a briefing for the CEO about recent meetings.
 Your task is to analyze multiple meeting transcripts and extract the most important business insights.
@@ -628,8 +628,7 @@ def analyze_combined_transcripts(combined_text: str, transcripts_metadata: List[
         }
 
 """
-Updated KEY_MOMENTS_SYSTEM_PROMPT and extract_key_visual_moments function
-for modules/llm/meeting_intelligence.py
+Key Visual Moments extraction - IMPROVED VERSION
 """
 
 KEY_MOMENTS_SYSTEM_PROMPT = """
@@ -661,456 +660,188 @@ Limit to 5-10 most important visual moments. If no clear visual moments exist, r
 """
 
 def extract_key_visual_moments(
-    transcript: str,
+    transcript_text: str,
     segments: Optional[List[Dict[str, Any]]] = None,
     video_path: Optional[str] = None,
-    max_moments: int = 5
+    max_moments: int = 5,
+    context_window: int = 5
 ) -> Dict[str, Any]:
     """
-    Extract key visual moments from a transcript where screenshots would be valuable.
+    Extract key visual moments from a transcript where screenshots would be valuable,
+    including extended context around each moment.
     
     Args:
-        transcript: Full transcript text
-        segments: List of transcript segments with timestamps (optional)
+        transcript_text: Full transcript text
+        segments: List of transcript segments with timestamps
         video_path: Path to the video file (optional)
         max_moments: Maximum number of key moments to identify
+        context_window: Number of segments to include before and after for context
         
     Returns:
         Dictionary with key_moments list and metadata
     """
-    logger.info(f"Extracting up to {max_moments} key visual moments from transcript")
+    logger.info(f"Extracting up to {max_moments} key visual moments from transcript with context window of {context_window} segments")
     
     try:
-        # Try to use the LLM to identify key moments via Ollama
-        try:
-            from modules.llm.ollama import get_client
-            
-            # Get Ollama client
-            ollama_client = get_client()
-            
-            if ollama_client.is_available():
-                logger.info("Using Ollama client to extract key moments")
-                
-                # Prepare the prompt for the LLM
-                prompt = f"""
-You are an expert video editor. Identify {max_moments} key moments in this transcript where a screenshot would be valuable.
-
-For each moment:
-1. Identify timestamps where visual elements are important (slides, demonstrations, etc.)
-2. Write a brief description of what's visually important
-3. Rate importance as high, medium, or low
-
-Format as JSON:
-```json
-[
-  {{
-    "timestamp": "MM:SS",
-    "description": "Description of visual element",
-    "importance": "high/medium/low"
-  }}
-]
-```
-
-TRANSCRIPT:
-{transcript[:2000]}... (transcript continues)
-"""
-                # Call the Ollama API
-                logger.info("Sending prompt to Ollama")
-                llm_response = ollama_client.generate(
-                    prompt=prompt,
-                    system="You are a helpful assistant that outputs clean, valid JSON.",
-                    temperature=0.3
-                )
-                
-                if llm_response:
-                    # Parse the response with the JSON parser
-                    from modules.llm.json_parser import extract_key_moments
-                    key_moments = extract_key_moments(llm_response)
-                    
-                    if key_moments:
-                        logger.info(f"Successfully extracted {len(key_moments)} key moments from LLM")
-                    else:
-                        logger.info("No key moments found in LLM response, falling back to rule-based approach")
-                        key_moments = find_visual_cues_in_transcript(transcript)
-                else:
-                    logger.warning("Empty response from LLM, falling back to rule-based approach")
-                    key_moments = find_visual_cues_in_transcript(transcript)
-            else:
-                logger.warning("Ollama not available, falling back to rule-based approach")
-                key_moments = find_visual_cues_in_transcript(transcript)
-                
-        except ImportError as e:
-            logger.warning(f"Error importing Ollama client: {str(e)}")
-            key_moments = find_visual_cues_in_transcript(transcript)
-        except Exception as e:
-            logger.warning(f"Error using Ollama client: {str(e)}")
-            key_moments = find_visual_cues_in_transcript(transcript)
+        # Define strategic points in the video for key moments if we don't have segments
+        if not segments or len(segments) == 0:
+            logger.warning("No segments provided, creating simple timestamp-based moments")
+            return _create_default_key_moments(max_moments)
         
-        # If we still don't have any key moments, create some based on transcript structure
-        if not key_moments:
-            logger.info("No key moments found using any method, creating generic moments")
-            key_moments = []
-            
-            # If segments are provided, use them to create evenly spaced moments
-            if segments and len(segments) > 0:
-                # Get total transcript duration
-                total_duration = segments[-1]["end"] if segments[-1].get("end") else 0
-                
-                if total_duration > 0:
-                    # Create evenly spaced moments (beginning, 25%, 50%, 75%, near end)
-                    spacing = [0.05, 0.25, 0.5, 0.75, 0.95]  # Avoid exact beginning/end
-                    for i, pct in enumerate(spacing[:max_moments]):
-                        timestamp_seconds = total_duration * pct
-                        
-                        # Format timestamp as MM:SS
-                        minutes = int(timestamp_seconds // 60)
-                        seconds = int(timestamp_seconds % 60)
-                        formatted_timestamp = f"{minutes:02d}:{seconds:02d}"
-                        
-                        moment_type = "Introduction" if i == 0 else \
-                                    "Conclusion" if i == len(spacing) - 1 else \
-                                    f"Key point {i}"
-                        
-                        key_moments.append({
-                            "timestamp": formatted_timestamp,
-                            "description": f"{moment_type} at {formatted_timestamp}",
-                            "importance": "high" if i in [0, len(spacing)-1] else "medium"
-                        })
+        # Get total duration from segments
+        total_duration = segments[-1].get("end", 0) if segments else 0
         
-        # Process the extracted moments
-        valid_moments = []
-        for moment in key_moments:
-            # Check for required fields
-            if "timestamp" not in moment or not moment["timestamp"]:
+        # Calculate strategic timestamps for key moments (intro, points, conclusion)
+        timestamps = []
+        
+        # Beginning (5% into the video)
+        timestamps.append(total_duration * 0.05)
+        
+        # Evenly distribute remaining timestamps up to 95% of the duration
+        middle_points = max_moments - 2  # Subtract intro and conclusion
+        if middle_points > 0:
+            step = (total_duration * 0.9) / (middle_points + 1)
+            start = total_duration * 0.05 + step
+            for i in range(middle_points):
+                timestamps.append(start + i * step)
+        
+        # End (95% into the video)
+        timestamps.append(total_duration * 0.95)
+        
+        # Create key moments with extended context
+        key_moments = []
+        
+        for i, timestamp in enumerate(timestamps[:max_moments]):
+            # Find closest segment to this timestamp
+            closest_segment_idx = _find_segment_index_by_timestamp(segments, timestamp)
+            
+            if closest_segment_idx == -1:
                 continue
                 
-            if "description" not in moment or not moment["description"]:
-                continue
+            # Determine segment indices for context window
+            start_idx = max(0, closest_segment_idx - context_window)
+            end_idx = min(len(segments) - 1, closest_segment_idx + context_window)
             
-            # Ensure importance is one of the valid values
-            if "importance" not in moment or moment["importance"] not in ["high", "medium", "low"]:
-                moment["importance"] = "medium"
+            # Get the actual timestamp from the segment
+            actual_timestamp = segments[closest_segment_idx].get("start", timestamp)
             
-            # Add a title field derived from description
-            if "title" not in moment:
-                # Create a short title from the description
-                title = moment["description"]
-                if len(title) > 40:
-                    title = title[:37] + "..."
-                moment["title"] = title
+            # Title based on position
+            title = "Introduction" if i == 0 else "Conclusion" if i == len(timestamps) - 1 else f"Key point {i}"
             
-            # If segments are provided, find the matching segment text
-            if segments and "transcript_text" not in moment:
-                # Convert timestamp to seconds for comparison
-                try:
-                    from modules.video_processing import parse_timestamp
-                    timestamp_seconds = parse_timestamp(moment["timestamp"])
-                except ImportError:
-                    # Fallback if parse_timestamp is unavailable
-                    parts = str(moment["timestamp"]).split(":")
-                    if len(parts) == 2:
-                        timestamp_seconds = int(parts[0]) * 60 + float(parts[1])
-                    else:
-                        timestamp_seconds = float(moment["timestamp"])
-                
-                # Find the segment that contains this timestamp
-                matching_segment = None
-                for segment in segments:
-                    if "start" in segment and "end" in segment:
-                        if segment["start"] <= timestamp_seconds <= segment["end"]:
-                            matching_segment = segment
-                            break
-                
-                # If we found a matching segment, add its text
-                if matching_segment and "text" in matching_segment:
-                    moment["transcript_text"] = matching_segment["text"]
-                else:
-                    # Otherwise, try to find the closest segment
-                    closest_segment = min(segments, key=lambda s: 
-                                        abs((s.get("start", 0) + s.get("end", 0))/2 - timestamp_seconds)
-                                        if "start" in s and "end" in s else float('inf'))
-                    if closest_segment and "text" in closest_segment:
-                        moment["transcript_text"] = closest_segment["text"]
-                    else:
-                        moment["transcript_text"] = "No matching transcript text found"
+            # Extract transcript text from all segments in the context window
+            transcript_context = " ".join([segment.get("text", "") for segment in segments[start_idx:end_idx+1]])
             
-            valid_moments.append(moment)
+            # Create the key moment with rich context
+            key_moment = {
+                "timestamp": actual_timestamp,
+                "title": title,
+                "description": f"Important moment at {_format_timestamp(actual_timestamp)}",
+                "transcript_text": transcript_context,
+                # Add timestamp range for UI highlighting
+                "context_start_time": segments[start_idx].get("start", actual_timestamp),
+                "context_end_time": segments[end_idx].get("end", actual_timestamp)
+            }
+            
+            key_moments.append(key_moment)
         
-        # Sort by timestamp
-        try:
-            from modules.video_processing import parse_timestamp
-            valid_moments.sort(key=lambda m: parse_timestamp(m["timestamp"]) if "timestamp" in m else 0)
-        except ImportError:
-            # Fallback sorting if parse_timestamp is unavailable
-            def simple_parse(ts):
-                if not ts:
-                    return 0
-                parts = str(ts).split(":")
-                if len(parts) == 2:
-                    return int(parts[0]) * 60 + float(parts[1])
-                return float(ts)
-            valid_moments.sort(key=lambda m: simple_parse(m.get("timestamp", 0)))
+        logger.info(f"Successfully extracted {len(key_moments)} key visual moments with rich context")
         
-        # Ensure we don't exceed the max number of moments
-        if len(valid_moments) > max_moments:
-            valid_moments = valid_moments[:max_moments]
-        
-        logger.info(f"Successfully extracted {len(valid_moments)} key visual moments")
+        # Return the key moments with success indication
         return {
-            "key_moments": valid_moments,
+            "key_moments": key_moments,
             "success": True,
-            "count": len(valid_moments)
+            "count": len(key_moments)
         }
         
     except Exception as e:
         logger.error(f"Error extracting key visual moments: {str(e)}")
         import traceback
         traceback.print_exc()
+        
+        # Return an empty list with error information
         return {
             "key_moments": [],
             "success": False,
             "error": str(e)
         }
 
-def enhance_moments_with_text(moments_data, segments):
-    """Add transcript text to moments"""
-    for moment in moments_data.get("key_moments", []):
-        # Find the segment closest to the timestamp
-        timestamp = moment.get("timestamp", 0)
-        closest_segment = min(segments, key=lambda s: abs(s.get("start", 0) - timestamp))
-        
-        # Add the transcript text from this segment
-        moment["transcript_text"] = closest_segment.get("text", "")
+def _find_segment_index_by_timestamp(segments: List[Dict[str, Any]], timestamp: float) -> int:
+    """
+    Find the index of the segment closest to the given timestamp.
     
-    return moments_data
+    Args:
+        segments: List of transcript segments
+        timestamp: Target timestamp in seconds
+        
+    Returns:
+        Index of the closest segment, or -1 if segments is empty
+    """
+    if not segments:
+        return -1
+        
+    closest_idx = 0
+    min_distance = float('inf')
+    
+    for i, segment in enumerate(segments):
+        start = segment.get("start", 0)
+        distance = abs(start - timestamp)
+        
+        if distance < min_distance:
+            min_distance = distance
+            closest_idx = i
+    
+    return closest_idx
 
-def create_fallback_key_moments(segments):
-    """Create fallback key moments at regular intervals in the transcript"""
-    print("Creating fallback key moments")
+def _create_default_key_moments(max_moments: int) -> Dict[str, Any]:
+    """
+    Create generic key moments when no segments are available.
     
-    if not segments or len(segments) < 5:
-        return {"key_moments": []}
+    Args:
+        max_moments: Maximum number of moments to create
         
-    # Choose segments at different points in the transcript
-    total_segments = len(segments)
-    indices = [
-        total_segments // 10,                 # 10% into the transcript
-        total_segments // 4,                  # 25% into the transcript
-        total_segments // 2,                  # 50% into the transcript
-        (total_segments * 3) // 4,            # 75% into the transcript
-        total_segments - (total_segments // 8) # Near the end
-    ]
+    Returns:
+        Dictionary with key_moments and metadata
+    """
+    # Create generic moments at regular intervals
+    default_moments = []
     
-    # Ensure indices are within range
-    indices = [min(i, total_segments - 1) for i in indices]
-    # Ensure indices are unique
-    indices = list(set(indices))
+    # Assume a typical 30-minute video for default timestamps
+    assumed_duration = 1800  # 30 minutes in seconds
     
-    fallback_moments = []
-    for i, idx in enumerate(indices):
-        segment = segments[idx]
-        timestamp = segment.get('start', 0)
+    for i in range(max_moments):
+        # Calculate timestamp (evenly distributed)
+        pct = (i / (max_moments - 1)) if max_moments > 1 else 0.5
+        timestamp = assumed_duration * pct
         
-        # Create a title based on time
-        minutes = int(timestamp // 60)
-        seconds = int(timestamp % 60)
-        time_str = f"{minutes:02d}:{seconds:02d}"
+        # Create title based on position
+        title = "Introduction" if i == 0 else "Conclusion" if i == max_moments - 1 else f"Key point {i}"
         
-        fallback_moments.append({
+        default_moments.append({
             "timestamp": timestamp,
-            "title": f"Key Moment at {time_str}",
-            "description": f"Important point in the discussion at timestamp {time_str}",
-            "transcript_text": segment.get('text', '')
+            "title": title,
+            "description": f"{title} at {_format_timestamp(timestamp)}",
+            "transcript_text": f"Transcript context for {title} would appear here."
         })
     
-    print(f"Created {len(fallback_moments)} fallback moments")
-    return {"key_moments": fallback_moments}
+    return {
+        "key_moments": default_moments,
+        "success": True,
+        "count": len(default_moments)
+    }
 
-def format_timestamp(seconds):
-    """Format seconds into MM:SS format"""
-    minutes = int(seconds // 60)
-    seconds = int(seconds % 60)
-    return f"{minutes:02d}:{seconds:02d}"
-
-def extract_key_visual_moments(
-    transcript: str,
-    segments: Optional[List[Dict[str, Any]]] = None,
-    video_path: Optional[str] = None,
-    max_moments: int = 5
-) -> Dict[str, Any]:
+def _format_timestamp(seconds: float) -> str:
     """
-    Extract key visual moments from a transcript where screenshots would be valuable.
+    Format seconds as MM:SS.
     
     Args:
-        transcript: Full transcript text
-        segments: List of transcript segments with timestamps (optional)
-        video_path: Path to the video file (optional)
-        max_moments: Maximum number of key moments to identify
+        seconds: Time in seconds
         
     Returns:
-        Dictionary with key_moments list and metadata
+        Formatted time string
     """
-    logger.info(f"Extracting up to {max_moments} key visual moments from transcript")
-    
-    try:
-        # First try rule-based extraction
-        key_moments = find_visual_cues_in_transcript(transcript)
-        
-        # If rule-based extraction didn't find enough moments, create generic ones
-        if len(key_moments) < max_moments and segments and len(segments) > 0:
-            logger.info(f"Rule-based approach found {len(key_moments)} moments, adding generic ones to reach {max_moments}")
-            
-            # Get total transcript duration
-            total_duration = segments[-1]["end"] if segments[-1].get("end") else 0
-            
-            if total_duration > 0:
-                # How many more moments do we need
-                needed = max_moments - len(key_moments)
-                
-                # Create evenly spaced moments (beginning, 25%, 50%, 75%, near end)
-                spacing = [0.05, 0.25, 0.5, 0.75, 0.95]  # Avoid exact beginning/end
-                
-                for i, pct in enumerate(spacing[:needed]):
-                    timestamp_seconds = total_duration * pct
-                    
-                    # Format timestamp as MM:SS
-                    minutes = int(timestamp_seconds // 60)
-                    seconds = int(timestamp_seconds % 60)
-                    formatted_timestamp = f"{minutes:02d}:{seconds:02d}"
-                    
-                    moment_type = "Introduction" if i == 0 else \
-                                "Conclusion" if i == len(spacing) - 1 else \
-                                f"Key point {i}"
-                    
-                    key_moments.append({
-                        "timestamp": formatted_timestamp,
-                        "description": f"{moment_type} at {formatted_timestamp}",
-                        "importance": "high" if i in [0, len(spacing)-1] else "medium"
-                    })
-        
-        # Process the extracted moments
-        valid_moments = []
-        for moment in key_moments:
-            # Check for required fields
-            if "timestamp" not in moment or not moment["timestamp"]:
-                continue
-                
-            if "description" not in moment or not moment["description"]:
-                continue
-            
-            # Ensure importance is one of the valid values
-            if "importance" not in moment or moment["importance"] not in ["high", "medium", "low"]:
-                moment["importance"] = "medium"
-            
-            # Add a title field derived from description
-            if "title" not in moment:
-                # Create a short title from the description
-                title = moment["description"]
-                if len(title) > 40:
-                    title = title[:37] + "..."
-                moment["title"] = title
-            
-            # If segments are provided, find the matching segment text
-            if segments:
-                # Convert timestamp to seconds for comparison
-                try:
-                    from modules.video_processing import parse_timestamp
-                    timestamp_seconds = parse_timestamp(moment["timestamp"])
-                except ImportError:
-                    # Fallback if parse_timestamp is unavailable
-                    parts = str(moment["timestamp"]).split(":")
-                    if len(parts) == 2:
-                        timestamp_seconds = int(parts[0]) * 60 + float(parts[1])
-                    else:
-                        timestamp_seconds = float(moment["timestamp"])
-                
-                # Find the segment that contains this timestamp
-                matching_segment = None
-                for segment in segments:
-                    if "start" in segment and "end" in segment:
-                        if segment["start"] <= timestamp_seconds <= segment["end"]:
-                            matching_segment = segment
-                            break
-                
-                # If we found a matching segment, add its text
-                if matching_segment and "text" in matching_segment:
-                    moment["transcript_text"] = matching_segment["text"]
-                else:
-                    # Otherwise, try to find the closest segment
-                    closest_segment = min(segments, key=lambda s: 
-                                          abs((s.get("start", 0) + s.get("end", 0))/2 - timestamp_seconds)
-                                          if "start" in s and "end" in s else float('inf'))
-                    if closest_segment and "text" in closest_segment:
-                        moment["transcript_text"] = closest_segment["text"]
-                    else:
-                        moment["transcript_text"] = "No matching transcript text found"
-            
-            valid_moments.append(moment)
-        
-        # Sort by timestamp
-        try:
-            from modules.video_processing import parse_timestamp
-            valid_moments.sort(key=lambda m: parse_timestamp(m["timestamp"]) if "timestamp" in m else 0)
-        except ImportError:
-            # Fallback sorting if parse_timestamp is unavailable
-            def simple_parse(ts):
-                if not ts:
-                    return 0
-                parts = str(ts).split(":")
-                if len(parts) == 2:
-                    return int(parts[0]) * 60 + float(parts[1])
-                return float(ts)
-            valid_moments.sort(key=lambda m: simple_parse(m.get("timestamp", 0)))
-        
-        # Ensure we don't exceed the max number of moments
-        if len(valid_moments) > max_moments:
-            valid_moments = valid_moments[:max_moments]
-        
-        logger.info(f"Successfully extracted {len(valid_moments)} key visual moments")
-        return {
-            "key_moments": valid_moments,
-            "success": True,
-            "count": len(valid_moments)
-        }
-        
-    except Exception as e:
-        logger.error(f"Error extracting key visual moments: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        
-        # Even if there's an error, try to return some default moments
-        if segments and len(segments) > 0:
-            # Create a few default moments at regular intervals
-            total_duration = segments[-1]["end"] if segments[-1].get("end") else 0
-            default_moments = []
-            
-            if total_duration > 0:
-                intervals = [0.1, 0.5, 0.9]  # Beginning, middle, end
-                for i, pct in enumerate(intervals):
-                    timestamp_seconds = total_duration * pct
-                    minutes = int(timestamp_seconds // 60)
-                    seconds = int(timestamp_seconds % 60)
-                    desc = "Beginning" if i == 0 else "Middle" if i == 1 else "End"
-                    
-                    default_moments.append({
-                        "timestamp": f"{minutes:02d}:{seconds:02d}",
-                        "description": f"{desc} of video",
-                        "importance": "medium",
-                        "title": f"{desc} of video"
-                    })
-                
-                return {
-                    "key_moments": default_moments,
-                    "success": False,
-                    "error": str(e),
-                    "note": "Using default moments due to error"
-                }
-        
-        return {
-            "key_moments": [],
-            "success": False,
-            "error": str(e)
-        }
+    minutes = int(seconds // 60)
+    remaining_seconds = int(seconds % 60)
+    return f"{minutes:02d}:{remaining_seconds:02d}"
 
 def find_visual_cues_in_transcript(transcript: str) -> List[Dict[str, Any]]:
     """

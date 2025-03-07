@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Transcript Segment Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        pre { background: #f5f5f5; padding: 10px; overflow: auto; max-height: 400px; }
+        .segment { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; }
+        .segment-time { color: blue; font-weight: bold; }
+        .segment-text { margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Segment Debugging for Transcript: {{ transcript.id }}</h1>
+    
+    <h2>Segments Info</h2>
+    <p>Type: {{ transcript.segments|type }}</p>
+    <p>Length: {{ transcript.segments|length if transcript.segments else 0 }}</p>
+    
+    <h2>First Segment Raw Data</h2>
+    <pre>{{ transcript.segments[0]|tojson(indent=2) if transcript.segments and transcript.segments|length > 0 else 'No segments' }}</pre>
+    
+    <h2>Sample Segments (first 5)</h2>
+    <div id="sample-segments">
+        {% if transcript.segments and transcript.segments|length > 0 %}
+            {% for segment in transcript.segments[:5] %}
+                <div class="segment">
+                    <div class="segment-time">
+                        {{ '%02d:%02d' % ((segment.start / 60)|int, (segment.start % 60)|int) }} - 
+                        {{ '%02d:%02d' % ((segment.end / 60)|int, (segment.end % 60)|int) }}
+                    </div>
+                    <div class="segment-text">{{ segment.text }}</div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No segments found</p>
+        {% endif %}
+    </div>
+    
+    <h2>First 1000 Characters of Raw Transcript</h2>
+    <pre>{{ transcript.transcript[:1000] if transcript.transcript else 'No transcript text' }}...</pre>
+    
+    <script>
+        // Simple debug info displayed in console
+        console.log("Segments type check:", typeof {{ transcript.segments|tojson if transcript.segments else '[]' }});
+        console.log("Is segments an array?", Array.isArray({{ transcript.segments|tojson if transcript.segments else '[]' }}));
+        console.log("Segments length:", {{ transcript.segments|length if transcript.segments else 0 }});
+        
+        {% if transcript.segments and transcript.segments|length > 0 %}
+            console.log("First segment:", {{ transcript.segments[0]|tojson }});
+            console.log("First segment keys:", Object.keys({{ transcript.segments[0]|tojson }}));
+        {% endif %}
+    </script>
+</body>
+</html>

@@ -28,52 +28,52 @@ def generate_enhanced_report(transcript_data, output_path, logo_path=None):
     # Create styles
     styles = getSampleStyleSheet()
     
-    # Add custom styles
-    styles.add(ParagraphStyle(
-        name='Heading1',
-        parent=styles['Heading1'],
-        fontSize=18,
-        spaceAfter=12,
-        textColor=colors.HexColor('#2C3E50')
-    ))
+    # Modify existing styles directly
+    styles['Heading1'].fontSize = 18
+    styles['Heading1'].spaceAfter = 12
+    styles['Heading1'].textColor = colors.HexColor('#2C3E50')
     
-    styles.add(ParagraphStyle(
-        name='Heading2',
-        parent=styles['Heading2'],
-        fontSize=16,
-        spaceAfter=10,
-        textColor=colors.HexColor('#3498DB')
-    ))
+    styles['Heading2'].fontSize = 16
+    styles['Heading2'].spaceAfter = 10
+    styles['Heading2'].textColor = colors.HexColor('#3498DB')
     
-    styles.add(ParagraphStyle(
-        name='Heading3',
-        parent=styles['Heading3'],
-        fontSize=14,
-        spaceAfter=8,
-        textColor=colors.HexColor('#2980B9')
-    ))
+    styles['Heading3'].fontSize = 14
+    styles['Heading3'].spaceAfter = 8
+    styles['Heading3'].textColor = colors.HexColor('#2980B9')
     
-    styles.add(ParagraphStyle(
-        name='Normal',
+    styles['Normal'].fontSize = 10
+    styles['Normal'].leading = 14
+    styles['Normal'].spaceAfter = 8
+    
+    styles['Bullet'].leftIndent = 20
+    styles['Bullet'].firstLineIndent = 0
+    styles['Bullet'].spaceBefore = 0
+    styles['Bullet'].bulletIndent = 10
+    styles['Bullet'].bulletFontName = 'Helvetica'
+    styles['Bullet'].bulletFontSize = 10
+    styles['Bullet'].bulletText = '•'
+    
+    # Add a custom caption style with unique name
+    custom_caption_style = ParagraphStyle(
+        name='CustomCaption',
         parent=styles['Normal'],
-        fontSize=10,
-        leading=14,
-        spaceAfter=8
-    ))
+        fontSize=9,
+        textColor=colors.gray,
+        alignment=1,  # Center alignment
+        spaceAfter=12
+    )
+    styles.add(custom_caption_style)
     
-    styles.add(ParagraphStyle(
-        name='Bullet',
-        parent=styles['Normal'],
-        fontSize=10,
-        leftIndent=20,
-        firstLineIndent=0,
-        spaceBefore=0,
-        bulletIndent=10,
-        bulletFontName='Helvetica',
-        bulletFontSize=10,
-        bulletText='•'
-    ))
-    
+    print(f"Generating report for: {transcript_data.get('title')}")
+    print(f"Key moments available: {transcript_data.get('key_moments') is not None}")
+    if transcript_data.get('key_moments'):
+        print(f"Number of key moments: {len(transcript_data.get('key_moments', []))}")
+        for i, moment in enumerate(transcript_data['key_moments']):
+            print(f"  Moment {i+1}: {moment.get('title')}, ts={moment.get('timestamp')}")
+            print(f"  Has screenshot: {'screenshot_path' in moment}")
+            if 'screenshot_path' in moment:
+                print(f"  Screenshot path: {moment['screenshot_path']}")
+
     # Prepare content elements
     elements = []
     
@@ -83,9 +83,10 @@ def generate_enhanced_report(transcript_data, output_path, logo_path=None):
         img = Image(logo_path, width=1.5*inch, height=0.5*inch)
         header_data[0][0] = img
     
+    title_text = transcript_data.get('title', 'Untitled')
     header_title = f"""
     <font size="14" color="#2C3E50"><b>Meeting Transcript Report</b></font><br/>
-    <font size="10" color="#7F8C8D">{transcript_data['title']}</font><br/>
+    <font size="10" color="#7F8C8D">{title_text}</font><br/>
     <font size="8" color="#95A5A6">Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}</font>
     """
     header_data[0][1] = Paragraph(header_title, styles['Normal'])
@@ -110,7 +111,7 @@ def generate_enhanced_report(transcript_data, output_path, logo_path=None):
     elements.append(Paragraph("Executive Summary", styles['Heading1']))
     
     if transcript_data.get('summary'):
-        summary_text = transcript_data['summary'].replace('\n', '<br/>')
+        summary_text = str(transcript_data['summary']).replace('\n', '<br/>')
         elements.append(Paragraph(summary_text, styles['Normal']))
     else:
         elements.append(Paragraph("No summary available.", styles['Normal']))
@@ -125,33 +126,75 @@ def generate_enhanced_report(transcript_data, output_path, logo_path=None):
         for i, moment in enumerate(transcript_data['key_moments']):
             # Add moment title with timestamp
             timestamp_str = format_timestamp(moment.get('timestamp', 0))
-            moment_title = f"{moment.get('title', 'Key Moment')} ({timestamp_str})"
+            moment_title = f"{moment.get('title', f'Key Moment {i+1}')} ({timestamp_str})"
             elements.append(Paragraph(moment_title, styles['Heading3']))
             
             # Check if there's a screenshot
-            if 'screenshot_path' in moment and os.path.exists(moment['screenshot_path'].replace('/static/', app.static_folder + '/')):
+            if 'screenshot_path' in moment and moment['screenshot_path']:
                 try:
-                    # Add screenshot image
-                    screenshot_path = moment['screenshot_path'].replace('/static/', app.static_folder + '/')
-                    img = Image(screenshot_path, width=6*inch, height=4*inch, kind='proportional')
-                    elements.append(img)
+                    # Process the screenshot path
+                    screenshot_path = moment['screenshot_path']
                     
-                    # Add caption
-                    caption = f"Screenshot at {timestamp_str}"
-                    elements.append(Paragraph(caption, styles['Caption']))
+                    # Handle various path formats
+                    if screenshot_path.startswith('/static/'):
+                        # Try multiple methods to find the correct path
+                        import os
+                        
+                        # Method 1: Try using Flask app's static folder if available
+                        try:
+                            from flask import current_app
+                            if current_app:
+                                screenshot_path = screenshot_path.replace('/static/', current_app.static_folder + os.path.sep)
+                        except (ImportError, RuntimeError):
+                            pass
+                            
+                        # Method 2: Try relative path from current directory
+                        if not os.path.exists(screenshot_path):
+                            relative_path = screenshot_path.replace('/static/', 'static/')
+                            if os.path.exists(relative_path):
+                                screenshot_path = relative_path
+                                
+                        # Method 3: Try using parent directory of script
+                        if not os.path.exists(screenshot_path):
+                            parent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                            alt_path = os.path.join(parent_dir, screenshot_path.lstrip('/'))
+                            if os.path.exists(alt_path):
+                                screenshot_path = alt_path
+                    
+                    # Check for PNG version if JPG not found
+                    if not os.path.exists(screenshot_path) and screenshot_path.endswith('.jpg'):
+                        png_path = screenshot_path.replace('.jpg', '.png')
+                        if os.path.exists(png_path):
+                            screenshot_path = png_path
+                    
+                    # If the file exists, add it to the report
+                    if os.path.exists(screenshot_path):
+                        # Add screenshot image with proper sizing
+                        img = Image(screenshot_path, width=6*inch, height=4*inch, kind='proportional')
+                        elements.append(img)
+                        
+                        # Add caption
+                        caption = f"Screenshot at {timestamp_str}"
+                        elements.append(Paragraph(caption, styles['CustomCaption']))
+                    else:
+                        elements.append(Paragraph(f"[Screenshot not found: {screenshot_path}]", styles['Normal']))
                 except Exception as e:
                     print(f"Error adding image: {e}")
+                    import traceback
+                    traceback.print_exc()
                     # Add a placeholder if the image fails
-                    elements.append(Paragraph("[Screenshot could not be included]", styles['Caption']))
+                    elements.append(Paragraph(f"[Screenshot could not be included: {str(e)}]", styles['Normal']))
             
             # Add moment description
             if 'description' in moment and moment['description']:
-                elements.append(Paragraph(moment['description'], styles['Normal']))
+                description_text = str(moment.get('description', ''))
+                elements.append(Paragraph(description_text, styles['Normal']))
                 
             # Add transcript text
             if 'transcript_text' in moment and moment['transcript_text']:
+                transcript_text = str(moment.get('transcript_text', ''))
                 # Create a styled text box
-                text_box = Table([[Paragraph(moment['transcript_text'], styles['Normal'])]], 
+                text_box = Table([[Paragraph(transcript_text, styles['Normal'])]], 
                                colWidths=[7*inch], 
                                rowHeights=None)
                 text_box.setStyle(TableStyle([
@@ -173,10 +216,12 @@ def generate_enhanced_report(transcript_data, output_path, logo_path=None):
     
     if transcript_data.get('topics') and len(transcript_data['topics']) > 0:
         for topic in transcript_data['topics']:
-            elements.append(Paragraph(topic.get('name', 'Unnamed Topic'), styles['Heading3']))
+            topic_name = str(topic.get('name', 'Unnamed Topic'))
+            elements.append(Paragraph(topic_name, styles['Heading3']))
             
             for point in topic.get('points', []):
-                elements.append(Paragraph(f"• {point}", styles['Bullet']))
+                point_text = str(point) if point is not None else ''
+                elements.append(Paragraph(f"• {point_text}", styles['Bullet']))
             
             elements.append(Spacer(1, 0.1*inch))
     else:
@@ -199,14 +244,23 @@ def generate_enhanced_report(transcript_data, output_path, logo_path=None):
         ]
         
         for item in transcript_data['action_items']:
-            task = Paragraph(item.get('task', 'Unnamed Task'), styles['Normal'])
-            assignee = Paragraph(item.get('assignee', 'Unassigned'), styles['Normal'])
-            due = Paragraph(item.get('due', 'Not specified'), styles['Normal'])
+            # Safely handle None values in all fields
+            task_text = item.get('task', 'Unnamed Task') if item.get('task') is not None else 'Unnamed Task'
+            assignee_text = item.get('assignee', 'Unassigned') if item.get('assignee') is not None else 'Unassigned'
+            due_text = item.get('due', 'Not specified') if item.get('due') is not None else 'Not specified'
             
-            priority = item.get('priority', 'Medium')
-            if priority.lower() == 'high':
+            # Create paragraph objects with safe values
+            task = Paragraph(task_text, styles['Normal'])
+            assignee = Paragraph(assignee_text, styles['Normal'])
+            due = Paragraph(due_text, styles['Normal'])
+            
+            # Handle priority safely
+            priority = item.get('priority', 'Medium') if item.get('priority') is not None else 'Medium'
+            priority_lower = priority.lower() if hasattr(priority, 'lower') else 'medium'
+            
+            if priority_lower == 'high':
                 priority_color = '#E74C3C'  # Red for high priority
-            elif priority.lower() == 'low':
+            elif priority_lower == 'low':
                 priority_color = '#2ECC71'  # Green for low priority
             else:
                 priority_color = '#F39C12'  # Orange for medium priority
@@ -238,13 +292,24 @@ def generate_enhanced_report(transcript_data, output_path, logo_path=None):
     
     if transcript_data.get('decisions') and len(transcript_data['decisions']) > 0:
         for i, decision in enumerate(transcript_data['decisions']):
-            # Create a styled box for each decision
+            # Handle possible None values
+            decision_title = decision.get('decision', 'Unnamed Decision') if decision.get('decision') is not None else 'Unnamed Decision'
+            context = decision.get('context', 'No context provided') if decision.get('context') is not None else 'No context provided'
+            
+            # Safely handle stakeholders list
+            stakeholders = decision.get('stakeholders', ['Unknown'])
+            stakeholders_text = ', '.join(stakeholders) if stakeholders is not None else 'Unknown'
+            
+            # Safe handling for impact and next steps
+            impact = decision.get('impact', 'Medium') if decision.get('impact') is not None else 'Medium'
+            next_steps = decision.get('next_steps', 'None specified') if decision.get('next_steps') is not None else 'None specified'
+            
             decision_text = f"""
-            <b>{decision.get('decision', 'Unnamed Decision')}</b><br/>
-            <i>Context:</i> {decision.get('context', 'No context provided')}<br/>
-            <i>Stakeholders:</i> {', '.join(decision.get('stakeholders', ['Unknown']))}<br/>
-            <i>Impact:</i> <font color="{get_impact_color(decision.get('impact', 'Medium'))}">{decision.get('impact', 'Medium')}</font><br/>
-            <i>Next Steps:</i> {decision.get('next_steps', 'None specified')}
+            <b>{decision_title}</b><br/>
+            <i>Context:</i> {context}<br/>
+            <i>Stakeholders:</i> {stakeholders_text}<br/>
+            <i>Impact:</i> <font color="{get_impact_color(impact)}">{impact}</font><br/>
+            <i>Next Steps:</i> {next_steps}
             """
             
             decision_paragraph = Paragraph(decision_text, styles['Normal'])
@@ -276,34 +341,30 @@ def generate_enhanced_report(transcript_data, output_path, logo_path=None):
     
     if transcript_data.get('qa_pairs') and len(transcript_data['qa_pairs']) > 0:
         for i, qa in enumerate(transcript_data['qa_pairs']):
+            # Safely handle possible None values
+            question = qa.get('question', 'Unknown question') if qa.get('question') is not None else 'Unknown question'
+            asker = qa.get('asker', 'Unknown') if qa.get('asker') is not None else 'Unknown'
+            answer = qa.get('answer', 'No answer provided') if qa.get('answer') is not None else 'No answer provided'
+            answerer = qa.get('answerer', 'Unknown') if qa.get('answerer') is not None else 'Unknown'
+            
             qa_text = f"""
-            <b>Q:</b> {qa.get('question', 'Unknown question')}<br/>
-            <i>Asked by:</i> {qa.get('asker', 'Unknown')}<br/>
-            <b>A:</b> {qa.get('answer', 'No answer provided')}<br/>
-            <i>Answered by:</i> {qa.get('answerer', 'Unknown')}
+            <b>Q:</b> {question}<br/>
+            <i>Asked by:</i> {asker}<br/>
+            <b>A:</b> {answer}<br/>
+            <i>Answered by:</i> {answerer}
             """
             
-            if i % 2 == 0:
-                elements.append(Paragraph(qa_text, ParagraphStyle(
-                    name=f'QA{i}',
-                    parent=styles['Normal'],
-                    backColor=colors.HexColor('#F5EEF8'),
-                    borderPadding=10,
-                    borderWidth=1,
-                    borderColor=colors.HexColor('#D7BDE2'),
-                    borderRadius=8,
-                )))
-            else:
-                elements.append(Paragraph(qa_text, ParagraphStyle(
-                    name=f'QA{i}',
-                    parent=styles['Normal'],
-                    backColor=colors.HexColor('#E8F8F5'),
-                    borderPadding=10,
-                    borderWidth=1,
-                    borderColor=colors.HexColor('#A3E4D7'),
-                    borderRadius=8,
-                )))
-            
+            # Create a ParagraphStyle without registering it in the stylesheet
+            qa_style = ParagraphStyle(
+                name=f'qa_style_{i}',  # Use a unique name just for safety
+                parent=styles['Normal'],
+                backColor=colors.HexColor('#F5EEF8' if i % 2 == 0 else '#E8F8F5'),
+                borderPadding=10,
+                borderWidth=1,
+                borderColor=colors.HexColor('#D7BDE2' if i % 2 == 0 else '#A3E4D7'),
+                borderRadius=8,
+            )
+            elements.append(Paragraph(qa_text, qa_style))
             elements.append(Spacer(1, 0.1*inch))
     else:
         elements.append(Paragraph("No question and answer pairs identified.", styles['Normal']))
@@ -325,13 +386,18 @@ def generate_enhanced_report(transcript_data, output_path, logo_path=None):
         ]
         
         for commitment in transcript_data['commitments']:
-            person = Paragraph(commitment.get('person', 'Unknown'), styles['Normal'])
-            commitment_text = Paragraph(commitment.get('commitment', 'Unspecified'), styles['Normal'])
-            timeframe = Paragraph(commitment.get('timeframe', 'Not specified'), styles['Normal'])
+            # Handle possible None values
+            person_text = commitment.get('person', 'Unknown') if commitment.get('person') is not None else 'Unknown'
+            commitment_desc = commitment.get('commitment', 'Unspecified') if commitment.get('commitment') is not None else 'Unspecified'
+            timeframe_text = commitment.get('timeframe', 'Not specified') if commitment.get('timeframe') is not None else 'Not specified'
+            confidence_text = commitment.get('confidence', 'Medium') if commitment.get('confidence') is not None else 'Medium'
             
-            confidence = commitment.get('confidence', 'Medium')
-            confidence_color = get_confidence_color(confidence)
-            confidence_cell = Paragraph(f'<font color="{confidence_color}">{confidence}</font>', styles['Normal'])
+            person = Paragraph(person_text, styles['Normal'])
+            commitment_text = Paragraph(commitment_desc, styles['Normal']) 
+            timeframe = Paragraph(timeframe_text, styles['Normal'])
+            
+            confidence_color = get_confidence_color(confidence_text)
+            confidence_cell = Paragraph(f'<font color="{confidence_color}">{confidence_text}</font>', styles['Normal'])
             
             commitment_data.append([person, commitment_text, timeframe, confidence_cell])
         
@@ -360,9 +426,10 @@ def generate_enhanced_report(transcript_data, output_path, logo_path=None):
     
     if transcript_data.get('segments') and len(transcript_data['segments']) > 0:
         for segment in transcript_data['segments']:
-            time_str = format_time(segment['start'])
+            time_str = format_time(segment.get('start', 0))
+            segment_text = str(segment.get('text', ''))
             elements.append(Paragraph(
-                f'<font color="#3498DB"><b>[{time_str}]</b></font> {segment["text"]}',
+                f'<font color="#3498DB"><b>[{time_str}]</b></font> {segment_text}',
                 styles['Normal']
             ))
             elements.append(Spacer(1, 0.05*inch))
@@ -374,52 +441,50 @@ def generate_enhanced_report(transcript_data, output_path, logo_path=None):
     
     return output_path
 
+def format_timestamp(seconds):
+    """Format seconds into MM:SS format with leading zeros"""
+    if seconds is None:
+        return "00:00"
+    
+    try:
+        seconds = float(seconds)
+        minutes = int(seconds // 60)
+        secs = int(seconds % 60)
+        return f"{minutes:02d}:{secs:02d}"
+    except (ValueError, TypeError):
+        return "00:00"
+
 def format_time(seconds):
     """Format seconds into MM:SS format"""
-    minutes = int(seconds // 60)
-    seconds = int(seconds % 60)
-    return f"{minutes:02d}:{seconds:02d}"
+    try:
+        minutes = int(float(seconds) // 60)
+        seconds = int(float(seconds) % 60)
+        return f"{minutes:02d}:{seconds:02d}"
+    except (ValueError, TypeError):
+        return "00:00"
 
 def get_impact_color(impact):
     """Get color for impact level"""
-    impact = impact.lower()
-    if impact == 'high':
-        return '#C0392B'  # Dark Red
-    elif impact == 'low':
-        return '#27AE60'  # Dark Green
-    else:  # Medium or default
-        return '#D35400'  # Dark Orange
+    try:
+        impact_lower = impact.lower() if hasattr(impact, 'lower') else 'medium'
+        if impact_lower == 'high':
+            return '#C0392B'  # Dark Red
+        elif impact_lower == 'low':
+            return '#27AE60'  # Dark Green
+        else:  # Medium or default
+            return '#D35400'  # Dark Orange
+    except (AttributeError, TypeError):
+        return '#D35400'  # Default to medium/orange
 
 def get_confidence_color(confidence):
     """Get color for confidence level"""
-    confidence = confidence.lower()
-    if confidence == 'high':
-        return '#27AE60'  # Dark Green
-    elif confidence == 'low':
-        return '#C0392B'  # Dark Red
-    else:  # Medium or default
-        return '#D35400'  # Dark Orange
-
-# Now update the download_transcript endpoint in app.py to use this new function
-"""
-@app.route('/download/<transcript_id>')
-def download_transcript(transcript_id):
-    transcript_path = os.path.join(app.config['TRANSCRIPT_FOLDER'], f"{transcript_id}.json")
-    if not os.path.exists(transcript_path):
-        return jsonify({'error': 'Transcript not found'}), 404
-    
-    with open(transcript_path, 'r') as f:
-        transcript_data = json.load(f)
-    
-    download_path = os.path.join(app.config['TRANSCRIPT_FOLDER'], f"{transcript_id}_report.pdf")
-    
-    # Path to logo if you have one
-    logo_path = os.path.join(app.root_path, 'static', 'images', 'logo.png')
-    if not os.path.exists(logo_path):
-        logo_path = None
-    
-    # Generate the enhanced report
-    generate_enhanced_report(transcript_data, download_path, logo_path)
-    
-    return send_file(download_path, as_attachment=True, download_name=f"{transcript_data['title']}_report.pdf")
-"""
+    try:
+        confidence_lower = confidence.lower() if hasattr(confidence, 'lower') else 'medium'
+        if confidence_lower == 'high':
+            return '#27AE60'  # Dark Green
+        elif confidence_lower == 'low':
+            return '#C0392B'  # Dark Red
+        else:  # Medium or default
+            return '#D35400'  # Dark Orange
+    except (AttributeError, TypeError):
+        return '#D35400'  # Default to medium/orange

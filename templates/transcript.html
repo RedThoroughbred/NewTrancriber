@@ -1,1430 +1,1833 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ transcript.title }} - Video Transcription App</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            200: '#bae6fd',
-                            300: '#7dd3fc',
-                            400: '#38bdf8',
-                            500: '#0ea5e9',
-                            600: '#0284c7',
-                            700: '#0369a1',
-                            800: '#075985',
-                            900: '#0c4a6e',
-                        },
-                        dark: {
-                            800: '#1f2937',
-                            900: '#111827',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .timeline-segment:hover {
-                @apply bg-dark-900/80 cursor-pointer;
-            }
-            .timeline-segment.active {
-                @apply bg-primary-500;
-            }
-            .glass {
-                @apply bg-dark-900/80 backdrop-blur-md border border-white/5;
-            }
-            .btn-hover {
-                @apply transition-all duration-300 ease-in-out hover:shadow-lg hover:-translate-y-1;
-            }
-            .scrollbar-thin {
-                scrollbar-width: thin;
-            }
-            .scrollbar-thin::-webkit-scrollbar {
-                width: 6px;
-                height: 6px;
-            }
-            .scrollbar-thin::-webkit-scrollbar-track {
-                background: rgba(31, 41, 55, 0.2);
-                border-radius: 10px;
-            }
-            .scrollbar-thin::-webkit-scrollbar-thumb {
-                background: rgba(14, 165, 233, 0.5);
-                border-radius: 10px;
-            }
-            .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-                background: rgba(14, 165, 233, 0.7);
-            }
-            /* Animations */
-            @keyframes pulse-glow {
-                0%, 100% { opacity: 0.8; transform: scale(1); }
-                50% { opacity: 1; transform: scale(1.05); }
-            }
-            .animate-pulse-glow {
-                animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ transcript.title }} - Video Transcription App</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+darkMode: 'class',
+theme: {
+extend: {
+colors: {
+primary: {
+50: '#f0f9ff',
+100: '#e0f2fe',
+200: '#bae6fd',
+300: '#7dd3fc',
+400: '#38bdf8',
+500: '#0ea5e9',
+600: '#0284c7',
+700: '#0369a1',
+800: '#075985',
+900: '#0c4a6e',
+},
+dark: {
+800: '#1f2937',
+900: '#111827',
+}
+}
+}
+}
+}
+</script>
+<style type="text/tailwindcss">
+@layer utilities {
+.timeline-segment:hover {
+@apply bg-dark-900/80 cursor-pointer;
+}
+.timeline-segment.active {
+@apply bg-primary-500;
+}
+.glass {
+@apply bg-dark-900/80 backdrop-blur-md border border-white/5;
+}
+.btn-hover {
+@apply transition-all duration-300 ease-in-out hover:shadow-lg hover:-translate-y-1;
+}
+.scrollbar-thin {
+scrollbar-width: thin;
+}
+.scrollbar-thin::-webkit-scrollbar {
+width: 6px;
+height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+background: rgba(31, 41, 55, 0.2);
+border-radius: 10px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+background: rgba(14, 165, 233, 0.5);
+border-radius: 10px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+background: rgba(14, 165, 233, 0.7);
+}
+/* Animations /
+@keyframes pulse-glow {
+0%, 100% { opacity: 0.8; transform: scale(1); }
+50% { opacity: 1; transform: scale(1.05); }
+}
+.animate-pulse-glow {
+animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+/ Screenshot highlight effect /
+.screenshot-highlight {
+@apply ring-4 ring-blue-500/50 ring-offset-2;
+}
+/ Image magnifier */
+.img-magnifier-container {
+position: relative;
+}
+.img-magnifier-glass {
+position: absolute;
+border-radius: 50%;
+cursor: none;
+width: 150px;
+height: 150px;
+border: 3px solid #38bdf8;
+display: none;
+}
+}
+</style>
 </head>
 <body class="min-h-screen bg-gray-50 text-gray-800 light-mode">
-    <!-- Delete Confirmation Modal -->
-    <div id="delete-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 scale-100 transition-transform duration-200">
-            <h3 class="text-xl font-medium mb-4 text-gray-800">Confirm Deletion</h3>
-            <p class="text-gray-600 mb-6">Are you sure you want to delete this transcript? This action cannot be undone.</p>
-            <div class="flex justify-end space-x-4">
-                <button id="cancel-delete" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition border border-gray-300">Cancel</button>
-                <button id="confirm-delete" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition btn-hover">Delete</button>
-            </div>
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+<div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 scale-100 transition-transform duration-200">
+<h3 class="text-xl font-medium mb-4 text-gray-800">Confirm Deletion</h3>
+<p class="text-gray-600 mb-6">Are you sure you want to delete this transcript? This action cannot be undone.</p>
+<div class="flex justify-end space-x-4">
+<button id="cancel-delete" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition border border-gray-300">Cancel</button>
+<button id="confirm-delete" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition btn-hover">Delete</button>
+</div>
+</div>
+</div>
+<!-- Image Preview Modal -->
+<div id="image-preview-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+    <div class="relative w-full max-w-5xl p-4">
+        <button id="close-image-preview" class="absolute top-2 right-2 text-white bg-gray-800/70 hover:bg-gray-700 rounded-full p-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+        <img id="modal-image" class="max-h-[80vh] mx-auto" src="" alt="Screenshot Preview">
+        <div class="text-white text-center mt-4">
+            <h4 id="modal-image-title" class="text-lg font-medium"></h4>
+            <p id="modal-image-description" class="text-sm opacity-80 mt-1"></p>
+        </div>
+        <div class="flex justify-center mt-4 space-x-4">
+            <button id="download-image" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                <span class="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download
+                </span>
+            </button>
         </div>
     </div>
+</div>
 
-    <div class="container mx-auto px-4 py-6">
-        <header class="flex justify-between items-center mb-8 bg-white border border-gray-200 rounded-xl shadow-sm p-4">
-            <div class="flex items-center space-x-4">
-                <h1 class="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-500 to-blue-700 bg-clip-text text-transparent">
-                    Video Transcriber
-                </h1>
+<div class="container mx-auto px-4 py-6">
+    <header class="flex justify-between items-center mb-8 bg-white border border-gray-200 rounded-xl shadow-sm p-4">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-500 to-blue-700 bg-clip-text text-transparent">
+                Video Transcriber
+            </h1>
+        </div>
+        <nav class="flex space-x-6 items-center">
+            <a href="/" class="text-blue-600 hover:text-blue-800 transition flex items-center space-x-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                <span>Home</span>
+            </a>
+            <a href="/dashboard" class="text-blue-600 hover:text-blue-800 transition flex items-center space-x-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+                <span>Dashboard</span>
+            </a>
+        </nav>
+    </header>
+    <main class="max-w-7xl mx-auto">
+        <section>
+            <!-- File info and actions bar -->
+            <div class="bg-white rounded-xl p-5 mb-6 transition-all shadow-sm border border-gray-200">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800">{{ transcript.title }}</h2>
+                            <p class="text-gray-500 text-sm flex items-center">
+                                <span class="mr-3">{{ transcript.original_filename }}</span>
+                                <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-600">
+                                    {% if transcript.segments and transcript.segments|length > 0 %}
+                                        {{ (transcript.segments[-1].end / 60)|int }}:{{ '%02d' % ((transcript.segments[-1].end % 60)|int) }}
+                                    {% else %}
+                                        0:00
+                                    {% endif %}
+                                </span>
+                            </p>
+                        </div>
+                        <!-- Add AI Status Indicator -->
+                        <div class="ml-2 bg-green-100 text-green-600 px-2 py-1 rounded-full text-xs flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            AI Analysis Complete
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap md:flex-nowrap gap-2">
+                        <a href="/download/{{ transcript.id }}" class="btn-hover bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Download Enhanced Report
+                        </a>
+                        <button onclick="openVideoLocation()" class="btn-hover bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg border border-gray-300 transition flex items-center" data-filepath="{{ transcript.filepath }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            View Video
+                        </button>
+                        <button onclick="deleteTranscript()" class="btn-hover bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Delete
+                        </button>
+                    </div>
+                </div>
             </div>
-            <nav class="flex space-x-6 items-center">
-                <a href="/" class="text-blue-600 hover:text-blue-800 transition flex items-center space-x-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                    </svg>
-                    <span>Home</span>
-                </a>
-                <a href="/dashboard" class="text-blue-600 hover:text-blue-800 transition flex items-center space-x-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                    </svg>
-                    <span>Dashboard</span>
-                </a>
-            </nav>
-        </header>
-        <main class="max-w-7xl mx-auto">
-            <section>
-                <!-- File info and actions bar -->
-                <div class="bg-white rounded-xl p-5 mb-6 transition-all shadow-sm border border-gray-200">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <div class="flex items-center space-x-4">
-                            <div class="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
-                            </div>
-                            <div>
-                                <h2 class="text-xl font-bold text-gray-800">{{ transcript.title }}</h2>
-                                <p class="text-gray-500 text-sm flex items-center">
-                                    <span class="mr-3">{{ transcript.original_filename }}</span>
-                                    <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-600">
+
+            <!-- Main content grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Main transcript panel -->
+                <div class="lg:col-span-8 lg:order-1 order-2">
+                    <div class="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col h-full">
+                        <!-- Video/Audio player & timeline -->
+                        <div class="bg-gray-100 border-b border-gray-300 sticky top-0 z-10">
+                            <div class="p-4">
+                                <div class="mb-3 flex justify-between items-center">
+                                    <div class="flex items-center space-x-2">
+                                        <button id="play-btn" class="p-2 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </button>
+                                        <select id="speed-select" class="bg-white text-gray-700 p-1 rounded border border-gray-300">
+                                            <option value="1">1x</option>
+                                            <option value="1.5">1.5x</option>
+                                            <option value="2">2x</option>
+                                        </select>
+                                        <div class="text-sm text-gray-700">
+                                            <span id="current-time" class="tabular-nums">0:00</span> /
+                                            <span id="total-time" class="tabular-nums">
+                                                {% if transcript.segments and transcript.segments|length > 0 %}
+                                                    {{ (transcript.segments[-1].end / 60)|int }}:{{ '%02d' % ((transcript.segments[-1].end % 60)|int) }}
+                                                {% else %}
+                                                    0:00
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <h3 class="text-lg font-medium text-blue-600 hidden md:block">Timeline</h3>
+                                    <div class="flex items-center">
+                                        <button id="rewind-btn" class="p-2 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition" title="Jump back 10s">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.333 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Enhanced timeline -->
+                                <div class="relative">
+                                    <div class="relative h-8 bg-white rounded-xl overflow-hidden border border-gray-300" id="timeline-container">
+                                        <div class="absolute top-0 left-0 h-full bg-blue-200" id="timeline-progress" style="width: 0%;"></div>
+
+                                        <!-- Timeline markers for segments -->
                                         {% if transcript.segments and transcript.segments|length > 0 %}
-                                            {{ (transcript.segments[-1].end / 60)|int }}:{{ '%02d' % ((transcript.segments[-1].end % 60)|int) }}
-                                        {% else %}
-                                            0:00
+                                            {% set total_duration = transcript.segments[-1].end %}
+                                            {% if total_duration <= 0 %}
+                                                {% set total_duration = 1.0 %}  <!-- Ensure we never divide by zero -->
+                                            {% endif %}
+                                            
+                                            {% for segment in transcript.segments %}
+                                            <div
+                                                class="timeline-segment absolute top-0 h-full hover:bg-opacity-50 transition duration-150"
+                                                style="left: {{ (segment.start / total_duration * 100)|float if total_duration > 0 else 0 }}%; width: {{ ((segment.end - segment.start) / total_duration * 100)|float if total_duration > 0 else 0 }}%;"
+                                                data-start="{{ segment.start }}"
+                                                data-end="{{ segment.end }}"
+                                                data-index="{{ loop.index0 }}"
+                                                onclick="jumpToSegment({{ loop.index0 }})"
+                                                title="{{ '%02d:%02d' % ((segment.start / 60)|int, (segment.start % 60)|int) }} - {{ '%02d:%02d' % ((segment.end / 60)|int, (segment.end % 60)|int) }}"
+                                            ></div>
+                                            {% endfor %}
                                         {% endif %}
-                                    </span>
-                                </p>
-                            </div>
-                            <!-- Add AI Status Indicator -->
-                            <div class="ml-2 bg-green-100 text-green-600 px-2 py-1 rounded-full text-xs flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                </svg>
-                                AI Analysis Complete
+
+                                        <!-- Key Moment Markers -->
+                                        {% if transcript.key_moments and transcript.key_moments|length > 0 and transcript.segments and transcript.segments|length > 0 %}
+                                            {% set total_duration = transcript.segments[-1].end %}
+                                            {% for moment in transcript.key_moments %}
+                                                {% if moment.timestamp %}
+                                                    <div
+                                                        class="absolute top-0 h-full w-1 bg-primary-600 z-10"
+                                                        style="left: {{ (moment.timestamp / total_duration * 100)|float }}%;"
+                                                        title="{{ moment.title|default('Key Moment ' ~ loop.index) }}"
+                                                    >
+                                                        <div class="w-3 h-3 bg-primary-600 rounded-full -ml-1 -mt-1"></div>
+                                                    </div>
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% endif %}
+
+                                        <!-- Playhead -->
+                                        <div class="absolute top-0 h-full w-0.5 bg-blue-600 pointer-events-none hidden" id="playhead" style="left: 0%;">
+                                            <div class="absolute top-0 h-2 w-2 rounded-full bg-primary-400 -ml-1"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Time markers -->
+                                    {% if transcript.segments and transcript.segments|length > 0 %}
+                                        {% set total_duration = transcript.segments[-1].end %}
+                                        <div class="flex justify-between text-xs text-gray-600 mt-1 px-2">
+                                            <span>0:00</span>
+                                            <span>{{ (total_duration / 60 / 4)|int }}:{{ '%02d' % ((total_duration / 4 % 60)|int) }}</span>
+                                            <span>{{ (total_duration / 60 / 2)|int }}:{{ '%02d' % ((total_duration / 2 % 60)|int) }}</span>
+                                            <span>{{ (total_duration / 60 * 3/4)|int }}:{{ '%02d' % ((total_duration * 3/4 % 60)|int) }}</span>
+                                            <span>{{ (total_duration / 60)|int }}:{{ '%02d' % ((total_duration % 60)|int) }}</span>
+                                        </div>
+                                    {% else %}
+                                        <div class="flex justify-between text-xs text-gray-600 mt-1 px-2">
+                                            <span>0:00</span>
+                                            <span>0:00</span>
+                                            <span>0:00</span>
+                                            <span>0:00</span>
+                                            <span>0:00</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
-                        <div class="flex flex-wrap md:flex-nowrap gap-2">
-                            <a href="/download/{{ transcript.id }}" class="btn-hover bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                </svg>
-                                Download Enhanced Report
-                            </a>
-                            <button onclick="openVideoLocation()" class="btn-hover bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg border border-gray-300 transition flex items-center" data-filepath="{{ transcript.filepath }}">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
-                                View Video
-                            </button>
-                            <button onclick="deleteTranscript()" class="btn-hover bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                Delete
-                            </button>
+                        <!-- Transcript content -->
+                        <div class="p-2 md:p-4 flex flex-col h-full">
+                            <div class="flex justify-between items-center px-2 mb-3">
+                                <div class="flex items-center">
+                                    <h3 class="text-lg font-medium text-blue-700">Transcript</h3>
+                                    <button id="view-mode-toggle" onclick="toggleTranscriptView()" class="ml-2 p-1 rounded-lg bg-gray-100 border border-gray-300 text-xs flex items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                        </svg>
+                                        <span id="view-mode-text">Condensed</span>
+                                    </button>
+                                </div>
+                                <div class="relative" title="Search in transcript">
+                                    <input type="text" id="transcript-search" placeholder="Search in transcript..." class="w-48 md:w-64 pl-8 pr-2 py-1 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-800">
+                                    <div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
+                                        <svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="search-results" class="px-2 py-2 mb-2 bg-gray-100 rounded-lg text-sm border border-gray-300 hidden">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span id="results-count" class="text-blue-700 font-medium">0 results</span>
+                                    <button id="close-search-results" class="text-gray-400 hover:text-gray-300">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div id="results-list" class="max-h-32 overflow-y-auto scrollbar-thin space-y-1"></div>
+                            </div>
+
+                            <!-- Transcript text with enhanced styling - fixed height scrollable container -->
+                            <div class="max-h-[calc(100vh-270px)] overflow-y-auto scrollbar-thin" id="transcript-content">
+                                <!-- ULTRA SIMPLIFIED SEGMENT RENDERING -->
+                                {% if transcript.segments and transcript.segments|length > 0 %}
+                                    <div class="p-2 mb-2 bg-blue-100 text-blue-700 text-xs">
+                                        Found {{ transcript.segments|length }} segments in transcript
+                                    </div>
+                                    
+                                    {% for segment in transcript.segments %}
+                                        <div class="mb-3 p-3 rounded-lg hover:bg-gray-100 transition-all segment group" id="segment-{{ loop.index0 }}">
+                                            <div class="text-blue-600 text-xs font-medium tabular-nums">
+                                                {% if segment.start is defined %}
+                                                    {{ '%02d:%02d' % ((segment.start / 60)|int, (segment.start % 60)|int) }}
+                                                    {% if segment.end is defined %}
+                                                        - {{ '%02d:%02d' % ((segment.end / 60)|int, (segment.end % 60)|int) }}
+                                                    {% endif %}
+                                                {% else %}
+                                                    Segment {{ loop.index }}
+                                                {% endif %}
+                                            </div>
+                                            <p class="segment-text text-gray-800 mt-1">
+                                                {% if segment.text is defined %}
+                                                    {{ segment.text }}
+                                                {% else %}
+                                                    <span class="text-red-500">Missing text</span>
+                                                {% endif %}
+                                            </p>
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="p-4 text-center">
+                                        <p class="text-red-500 font-bold">No transcript segments available</p>
+                                        <p class="text-gray-500 mt-2">Debug info: {{ transcript.segments|length if transcript.segments else 0 }} segments</p>
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
+                <!-- Sidebar with tools and analysis -->
+                <div class="lg:col-span-4 lg:order-2 order-1">
+                    <div class="space-y-5">
+                        <!-- Tab navigation for sidebar tools -->
+                        <div class="bg-white rounded-xl overflow-hidden shadow-lg">
+                            <div class="flex border-b border-gray-200">
+                                <button id="tab-summary" onclick="switchTab('summary')" class="flex-1 py-3 px-4 text-blue-700 border-b-2 border-blue-500 font-medium text-sm">
+                                    <span class="flex items-center justify-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        Summary
+                                    </span>
+                                </button>
+                                <button id="tab-topics" onclick="switchTab('topics')" class="flex-1 py-3 px-4 text-gray-400 border-b-2 border-transparent hover:text-gray-300 font-medium text-sm">
+                                    <span class="flex items-center justify-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                        </svg>
+                                        Topics
+                                    </span>
+                                </button>
+                                <button id="tab-insights" onclick="switchTab('insights')" class="flex-1 py-3 px-4 text-gray-400 border-b-2 border-transparent hover:text-gray-300 font-medium text-sm">
+                                    <span class="flex items-center justify-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Meeting Insights
+                                    </span>
+                                </button>
+                                <button id="tab-key-moments" onclick="switchTab('key-moments')" class="flex-1 py-3 px-4 text-gray-400 border-b-2 border-transparent hover:text-gray-300 font-medium text-sm">
+                                    <span class="flex items-center justify-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        Key Moments
+                                    </span>
+                                </button>
+                            </div>
 
-                <!-- Main content grid -->
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    <!-- Main transcript panel -->
-                    <div class="lg:col-span-8 lg:order-1 order-2">
-                        <div class="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col h-full">
-                            <!-- Video/Audio player & timeline -->
-                            <div class="bg-gray-100 border-b border-gray-300 sticky top-0 z-10">
-                                <div class="p-4">
-                                    <div class="mb-3 flex justify-between items-center">
-                                        <div class="flex items-center space-x-2">
-                                            <button id="play-btn" class="p-2 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                </svg>
-                                            </button>
-                                            <select id="speed-select" class="bg-white text-gray-700 p-1 rounded border border-gray-300">
-                                                <option value="1">1x</option>
-                                                <option value="1.5">1.5x</option>
-                                                <option value="2">2x</option>
-                                            </select>
-                                            <div class="text-sm text-gray-700">
-                                                <span id="current-time" class="tabular-nums">0:00</span> / 
-                                                <span id="total-time" class="tabular-nums">
-                                                    {% if transcript.segments and transcript.segments|length > 0 %}
-                                                        {{ (transcript.segments[-1].end / 60)|int }}:{{ '%02d' % ((transcript.segments[-1].end % 60)|int) }}
-                                                    {% else %}
-                                                        0:00
-                                                    {% endif %}
-                                                </span>
+                            <!-- Summary Panel -->
+                            <div id="panel-summary" class="p-5">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-lg font-medium text-primary-300">Transcript Summary</h3>
+                                </div>
+
+                                {% if transcript.summary %}
+                                <div class="bg-white rounded-lg p-4 border border-gray-200">
+                                    <div class="text-sm whitespace-pre-wrap text-gray-800">{{ transcript.summary }}</div>
+                                </div>
+                                {% else %}
+                                <div class="bg-gray-100 rounded-lg p-6 border border-gray-200 text-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto mb-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <p class="text-gray-500 mb-3">No summary available</p>
+                                    <p class="text-sm text-gray-500">This transcript has not been analyzed yet</p>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Topics Panel -->
+                            <div id="panel-topics" class="p-5 hidden">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-lg font-medium text-primary-300">Key Topics</h3>
+                                </div>
+
+                                {% if transcript.topics %}
+                                <div class="space-y-4">
+                                    {% for topic in transcript.topics %}
+                                    <div class="bg-white rounded-lg p-4 border border-gray-200">
+                                        <h5 class="font-medium text-blue-600 mb-2 flex items-center">
+                                            <span class="inline-block w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                                            {{ topic.name }}
+                                        </h5>
+                                        <ul class="space-y-1 pl-4">
+                                            {% for point in topic.points %}
+                                            <li class="text-sm text-gray-800 relative before:absolute before:content-['•'] before:text-blue-500 before:-left-4">
+                                                {{ point }}
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <div class="bg-gray-100 rounded-lg p-6 border border-gray-200 text-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto mb-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                    </svg>
+                                    <p class="text-gray-500 mb-3">No topics available</p>
+                                    <p class="text-sm text-gray-500">This transcript has not been analyzed yet</p>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Meeting Insights Panel (New) -->
+                            <div id="panel-insights" class="p-5 hidden">
+                                <h3 class="text-lg font-medium mb-4 text-primary-300">Meeting Intelligence</h3>
+
+                                <!-- Questions & Answers -->
+                                <div class="space-y-4">
+                                    <div class="bg-white rounded-lg p-4 border border-gray-200">
+                                        <h4 class="font-medium text-blue-600 mb-3">Questions & Answers</h4>
+                                        {% if transcript.qa_pairs and transcript.qa_pairs|length > 0 %}
+                                            {% for qa in transcript.qa_pairs %}
+                                            <div class="mb-3 pb-3 {% if not loop.last %}border-b border-gray-200{% endif %}">
+                                                <div class="flex items-start">
+                                                    <div class="bg-blue-100 rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold text-blue-600 mr-2 mt-1">Q</div>
+                                                    <div>
+                                                        <p class="text-gray-800">{{ qa.question }}</p>
+                                                        <p class="text-xs text-gray-500">Asked by: {{ qa.asker }}</p>
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-start mt-2 ml-8">
+                                                    <div class="bg-blue-50 rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold text-blue-600 mr-2 mt-1">A</div>
+                                                    <div>
+                                                        <p class="text-gray-700">{{ qa.answer }}</p>
+                                                        <p class="text-xs text-gray-500">Answered by: {{ qa.answerer }}</p>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <h3 class="text-lg font-medium text-blue-600 hidden md:block">Timeline</h3>
-                                        <div class="flex items-center">
-                                            <button id="rewind-btn" class="p-2 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition" title="Jump back 10s">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.333 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
-                                                </svg>
-                                            </button>
-                                        </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <p class="text-gray-500">No questions and answers identified.</p>
+                                        {% endif %}
                                     </div>
 
-                                    <!-- Enhanced timeline -->
-                                    <div class="relative">
-                                        <div class="relative h-8 bg-white rounded-xl overflow-hidden border border-gray-300" id="timeline-container">
-                                            <div class="absolute top-0 left-0 h-full bg-blue-200" id="timeline-progress" style="width: 0%;"></div>
-                                            
-                                            <!-- Timeline markers for segments -->
-                                            {% if transcript.segments and transcript.segments|length > 0 %}
-                                                {% for segment in transcript.segments %}
-                                                <div 
-                                                    class="timeline-segment absolute top-0 h-full hover:bg-opacity-50 transition duration-150" 
-                                                    style="left: {{ (segment.start / transcript.segments[-1].end * 100)|float }}%; width: {{ ((segment.end - segment.start) / transcript.segments[-1].end * 100)|float }}%;"
-                                                    data-start="{{ segment.start }}"
-                                                    data-end="{{ segment.end }}"
-                                                    data-index="{{ loop.index0 }}"
-                                                    onclick="jumpToSegment({{ loop.index0 }})"
-                                                    title="{{ '%02d:%02d' % ((segment.start / 60)|int, (segment.start % 60)|int) }} - {{ '%02d:%02d' % ((segment.end / 60)|int, (segment.end % 60)|int) }}"
-                                                ></div>
+                                    <!-- Key Decisions -->
+                                    <div class="bg-white rounded-lg p-4 border border-gray-200">
+                                        <h4 class="font-medium text-blue-600 mb-3">Key Decisions</h4>
+                                        {% if transcript.decisions and transcript.decisions|length > 0 %}
+                                            <div class="space-y-3">
+                                                {% for decision in transcript.decisions %}
+                                                <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                                    <h5 class="font-medium text-gray-800">{{ decision.decision }}</h5>
+                                                    <p class="text-sm text-gray-600 mt-1">{{ decision.context }}</p>
+                                                    <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs">
+                                                        <div><span class="text-gray-500">Impact:</span>
+                                                            <span class="{% if decision.impact == 'High' %}text-red-600{% elif decision.impact == 'Low' %}text-green-600{% else %}text-yellow-600{% endif %}">
+                                                                {{ decision.impact }}
+                                                            </span>
+                                                        </div>
+                                                        <div><span class="text-gray-500">Stakeholders:</span> {{ decision.stakeholders|join(', ') if decision.stakeholders else 'None' }}</div>
+                                                        {% if decision.next_steps %}
+                                                        <div class="w-full mt-1"><span class="text-gray-500">Next Steps:</span> {{ decision.next_steps }}</div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
                                                 {% endfor %}
-                                            {% endif %}
-                                            
-                                            <!-- Playhead -->
-                                            <div class="absolute top-0 h-full w-0.5 bg-blue-600 pointer-events-none hidden" id="playhead" style="left: 0%;">
-                                                <div class="absolute top-0 h-2 w-2 rounded-full bg-primary-400 -ml-1"></div>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Time markers -->
-                                        {% if transcript.segments and transcript.segments|length > 0 %}
-                                            {% set total_duration = transcript.segments[-1].end %}
-                                            <div class="flex justify-between text-xs text-gray-600 mt-1 px-2">
-                                                <span>0:00</span>
-                                                <span>{{ (total_duration / 60 / 4)|int }}:{{ '%02d' % ((total_duration / 4 % 60)|int) }}</span>
-                                                <span>{{ (total_duration / 60 / 2)|int }}:{{ '%02d' % ((total_duration / 2 % 60)|int) }}</span>
-                                                <span>{{ (total_duration / 60 * 3/4)|int }}:{{ '%02d' % ((total_duration * 3/4 % 60)|int) }}</span>
-                                                <span>{{ (total_duration / 60)|int }}:{{ '%02d' % ((total_duration % 60)|int) }}</span>
                                             </div>
                                         {% else %}
-                                            <div class="flex justify-between text-xs text-gray-600 mt-1 px-2">
-                                                <span>0:00</span>
-                                                <span>0:00</span>
-                                                <span>0:00</span>
-                                                <span>0:00</span>
-                                                <span>0:00</span>
+                                            <p class="text-gray-500">No key decisions identified.</p>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Personal Commitments -->
+                                    <div class="bg-white rounded-lg p-4 border border-gray-200">
+                                        <h4 class="font-medium text-blue-600 mb-3">Personal Commitments</h4>
+                                        {% if transcript.commitments and transcript.commitments|length > 0 %}
+                                            <div class="space-y-2">
+                                                {% for commitment in transcript.commitments %}
+                                                <div class="flex items-center">
+                                                    <div class="bg-blue-100 rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold text-blue-600 mr-2">
+                                                        {{ commitment.person[:1] }}
+                                                    </div>
+                                                    <div class="flex-1">
+                                                        <p class="text-gray-800 text-sm">{{ commitment.commitment }}</p>
+                                                        <div class="flex flex-wrap gap-x-3 text-xs text-gray-500">
+                                                            <span>By: {{ commitment.person }}</span>
+                                                            {% if commitment.timeframe != "Not specified" %}
+                                                            <span>Timeframe: {{ commitment.timeframe }}</span>
+                                                            {% endif %}
+                                                            <span>Confidence:
+                                                                <span class="{% if commitment.confidence == 'High' %}text-green-600{% elif commitment.confidence == 'Low' %}text-red-600{% else %}text-yellow-600{% endif %}">
+                                                                    {{ commitment.confidence }}
+                                                                </span>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
                                             </div>
+                                        {% else %}
+                                            <p class="text-gray-500">No personal commitments identified.</p>
                                         {% endif %}
                                     </div>
                                 </div>
                             </div>
-                            <!-- Transcript content -->
-                            <div class="p-2 md:p-4 flex flex-col h-full">
-                                <div class="flex justify-between items-center px-2 mb-3">
-                                    <div class="flex items-center">
-                                        <h3 class="text-lg font-medium text-blue-700">Transcript</h3>
-                                        <button id="view-mode-toggle" onclick="toggleTranscriptView()" class="ml-2 p-1 rounded-lg bg-gray-100 border border-gray-300 text-xs flex items-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                                            </svg>
-                                            <span id="view-mode-text">Condensed</span>
+
+                            <!-- Key Moments Panel with IMPROVED clickable screenshots -->
+                            <div id="panel-key-moments" class="p-5 hidden">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-lg font-medium text-primary-300">Key Visual Moments</h3>
+                                    <div class="flex space-x-2">
+                                        <select id="doc-format-select" class="text-xs bg-gray-100 border border-gray-300 rounded-lg px-2 py-1">
+                                            <option value="confluence">Confluence Format</option>
+                                            <option value="markdown">Markdown Format</option>
+                                            <option value="plain">Plain Text</option>
+                                        </select>
+                                        <button
+                                            class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-full transition"
+                                            onclick="copyDocumentation()">
+                                            <span class="flex items-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                                </svg>
+                                                Copy All for Documentation
+                                            </span>
                                         </button>
                                     </div>
-                                    <div class="relative" title="Search in transcript">
-                                        <input type="text" id="transcript-search" placeholder="Search in transcript..." class="w-48 md:w-64 pl-8 pr-2 py-1 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-800">
-                                        <div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
-                                            <svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                            </svg>
-                                        </div>
-                                    </div>
                                 </div>
-                                
-                                <div id="search-results" class="px-2 py-2 mb-2 bg-gray-100 rounded-lg text-sm border border-gray-300 hidden">
+
+                                <!-- Preview Box for Documentation Format -->
+                                <div id="documentation-preview" class="mb-4 hidden border border-gray-200 rounded-lg p-4 bg-white text-sm">
                                     <div class="flex justify-between items-center mb-2">
-                                        <span id="results-count" class="text-blue-700 font-medium">0 results</span>
-                                        <button id="close-search-results" class="text-gray-400 hover:text-gray-300">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                            </svg>
+                                        <h4 class="font-medium text-gray-700">Documentation Preview</h4>
+                                        <button onclick="toggleDocPreview()" class="text-xs text-gray-500 hover:text-gray-700">
+                                            Hide Preview
                                         </button>
                                     </div>
-                                    <div id="results-list" class="max-h-32 overflow-y-auto scrollbar-thin space-y-1"></div>
+                                    <div id="doc-preview-content" class="whitespace-pre-wrap font-mono text-gray-800 text-xs overflow-auto max-h-64 bg-gray-50 p-2 rounded"></div>
                                 </div>
-                                
-                                <!-- Transcript text with enhanced styling - fixed height scrollable container -->
-                                <div class="max-h-[calc(100vh-270px)] overflow-y-auto scrollbar-thin" id="transcript-content">
-                                    {% if transcript.segments and transcript.segments|length > 0 %}
-                                        {% for segment in transcript.segments %}
-                                        <div 
-                                            class="mb-3 p-3 rounded-lg hover:bg-gray-100 transition-all segment group" 
-                                            id="segment-{{ loop.index0 }}" 
-                                            data-start="{{ segment.start }}" 
-                                            data-end="{{ segment.end }}"
-                                            onclick="jumpToSegment({{ loop.index0 }})"
-                                        >
-                                            <div class="flex justify-between items-center mb-1">
-                                                <div class="text-blue-600 text-xs font-medium tabular-nums">
-                                                    {{ '%02d:%02d' % ((segment.start / 60)|int, (segment.start % 60)|int) }} - {{ '%02d:%02d' % ((segment.end / 60)|int, (segment.end % 60)|int) }}
-                                                </div>
-                                                <div class="opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
-                                                    <button class="text-gray-400 hover:text-blue-600 p-1" title="Copy segment" onclick="event.stopPropagation(); copySegmentText({{ loop.index0 }})">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+
+                                <!-- IMPROVED KEY MOMENTS DISPLAY -->
+                                {% if transcript.key_moments and transcript.key_moments|length > 0 %}
+                                    <div class="space-y-6">
+                                        {% for moment in transcript.key_moments %}
+                                            <div class="rounded-xl border border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-md key-moment-card" id="moment-{{ loop.index0 }}">
+                                                <div class="bg-gray-50 px-4 py-3 flex justify-between items-center border-b border-gray-200">
+                                                    <h4 class="text-sm font-medium text-blue-700 flex items-center">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                                         </svg>
-                                                    </button>
+                                                        {{ moment.title|default('Key Moment ' ~ loop.index) }}
+                                                    </h4>
+                                                    <span
+                                                        class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full cursor-pointer hover:bg-blue-200"
+                                                        onclick="jumpToTimestamp('{{ moment.timestamp }}')"
+                                                        title="Jump to this timestamp"
+                                                    >
+                                                        {% if moment.timestamp %}
+                                                            {{ '%02d:%02d' % ((moment.timestamp / 60)|int, (moment.timestamp % 60)|int) }}
+                                                        {% else %}
+                                                            00:00
+                                                        {% endif %}
+                                                    </span>
                                                 </div>
-                                            </div>
-                                            <p class="segment-text text-gray-800">{{ segment.text }}</p>
-                                        </div>
-                                        {% endfor %}
-                                    {% else %}
-                                        <div class="p-4 text-center">
-                                            <p class="text-gray-500">No transcript segments available</p>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Sidebar with tools and analysis -->
-                    <div class="lg:col-span-4 lg:order-2 order-1">
-                        <div class="space-y-5">
-                            <!-- Tab navigation for sidebar tools -->
-                            <div class="bg-white rounded-xl overflow-hidden shadow-lg">
-                                <div class="flex border-b border-gray-200">
-                                    <button id="tab-summary" onclick="switchTab('summary')" class="flex-1 py-3 px-4 text-blue-700 border-b-2 border-blue-500 font-medium text-sm">
-                                        <span class="flex items-center justify-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                            </svg>
-                                            Summary
-                                        </span>
-                                    </button>
-                                    <button id="tab-topics" onclick="switchTab('topics')" class="flex-1 py-3 px-4 text-gray-400 border-b-2 border-transparent hover:text-gray-300 font-medium text-sm">
-                                        <span class="flex items-center justify-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                                            </svg>
-                                            Topics
-                                        </span>
-                                    </button>
-                                    <button id="tab-insights" onclick="switchTab('insights')" class="flex-1 py-3 px-4 text-gray-400 border-b-2 border-transparent hover:text-gray-300 font-medium text-sm">
-                                        <span class="flex items-center justify-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                            Meeting Insights
-                                        </span>
-                                    </button>
-                                    <button id="tab-key-moments" onclick="switchTab('key-moments')" class="flex-1 py-3 px-4 text-gray-400 border-b-2 border-transparent hover:text-gray-300 font-medium text-sm">
-                                        <span class="flex items-center justify-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                            Key Moments
-                                        </span>
-                                    </button>
-                                </div>
-                                
-                                <!-- Summary Panel -->
-                                <div id="panel-summary" class="p-5">
-                                    <div class="flex justify-between items-center mb-4">
-                                        <h3 class="text-lg font-medium text-primary-300">Transcript Summary</h3>
-                                    </div>
-                                    
-                                    {% if transcript.summary %}
-                                    <div class="bg-white rounded-lg p-4 border border-gray-200">
-                                        <div class="text-sm whitespace-pre-wrap text-gray-800">{{ transcript.summary }}</div>
-                                    </div>
-                                    {% else %}
-                                    <div class="bg-gray-100 rounded-lg p-6 border border-gray-200 text-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto mb-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                        <p class="text-gray-500 mb-3">No summary available</p>
-                                        <p class="text-sm text-gray-500">This transcript has not been analyzed yet</p>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                
-                                <!-- Topics Panel -->
-                                <div id="panel-topics" class="p-5 hidden">
-                                    <div class="flex justify-between items-center mb-4">
-                                        <h3 class="text-lg font-medium text-primary-300">Key Topics</h3>
-                                    </div>
-                                    
-                                    {% if transcript.topics %}
-                                    <div class="space-y-4">
-                                        {% for topic in transcript.topics %}
-                                        <div class="bg-white rounded-lg p-4 border border-gray-200">
-                                            <h5 class="font-medium text-blue-600 mb-2 flex items-center">
-                                                <span class="inline-block w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                                                {{ topic.name }}
-                                            </h5>
-                                            <ul class="space-y-1 pl-4">
-                                                {% for point in topic.points %}
-                                                <li class="text-sm text-gray-800 relative before:absolute before:content-['•'] before:text-blue-500 before:-left-4">
-                                                    {{ point }}
-                                                </li>
-                                                {% endfor %}
-                                            </ul>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                    {% else %}
-                                    <div class="bg-gray-100 rounded-lg p-6 border border-gray-200 text-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto mb-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                                        </svg>
-                                        <p class="text-gray-500 mb-3">No topics available</p>
-                                        <p class="text-sm text-gray-500">This transcript has not been analyzed yet</p>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                
-                                <!-- Meeting Insights Panel (New) -->
-                                <div id="panel-insights" class="p-5 hidden">
-                                    <h3 class="text-lg font-medium mb-4 text-primary-300">Meeting Intelligence</h3>
-                                    
-                                    <!-- Questions & Answers -->
-                                    <div class="space-y-4">
-                                        <div class="bg-white rounded-lg p-4 border border-gray-200">
-                                            <h4 class="font-medium text-blue-600 mb-3">Questions & Answers</h4>
-                                            {% if transcript.qa_pairs and transcript.qa_pairs|length > 0 %}
-                                                {% for qa in transcript.qa_pairs %}
-                                                <div class="mb-3 pb-3 {% if not loop.last %}border-b border-gray-200{% endif %}">
-                                                    <div class="flex items-start">
-                                                        <div class="bg-blue-100 rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold text-blue-600 mr-2 mt-1">Q</div>
-                                                        <div>
-                                                            <p class="text-gray-800">{{ qa.question }}</p>
-                                                            <p class="text-xs text-gray-500">Asked by: {{ qa.asker }}</p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="flex items-start mt-2 ml-8">
-                                                        <div class="bg-blue-50 rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold text-blue-600 mr-2 mt-1">A</div>
-                                                        <div>
-                                                            <p class="text-gray-700">{{ qa.answer }}</p>
-                                                            <p class="text-xs text-gray-500">Answered by: {{ qa.answerer }}</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                {% endfor %}
-                                            {% else %}
-                                                <p class="text-gray-500">No questions and answers identified.</p>
-                                            {% endif %}
-                                        </div>
-                                        
-                                        <!-- Key Decisions -->
-                                        <div class="bg-white rounded-lg p-4 border border-gray-200">
-                                            <h4 class="font-medium text-blue-600 mb-3">Key Decisions</h4>
-                                            {% if transcript.decisions and transcript.decisions|length > 0 %}
-                                                <div class="space-y-3">
-                                                    {% for decision in transcript.decisions %}
-                                                    <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                                                        <h5 class="font-medium text-gray-800">{{ decision.decision }}</h5>
-                                                        <p class="text-sm text-gray-600 mt-1">{{ decision.context }}</p>
-                                                        <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs">
-                                                            <div><span class="text-gray-500">Impact:</span> 
-                                                                <span class="{% if decision.impact == 'High' %}text-red-600{% elif decision.impact == 'Low' %}text-green-600{% else %}text-yellow-600{% endif %}">
-                                                                    {{ decision.impact }}
-                                                                </span>
-                                                            </div>
-                                                            <div><span class="text-gray-500">Stakeholders:</span> {{ decision.stakeholders|join(', ') if decision.stakeholders else 'None' }}</div>
-                                                            {% if decision.next_steps %}
-                                                            <div class="w-full mt-1"><span class="text-gray-500">Next Steps:</span> {{ decision.next_steps }}</div>
-                                                            {% endif %}
-                                                        </div>
-                                                    </div>
-                                                    {% endfor %}
-                                                </div>
-                                            {% else %}
-                                                <p class="text-gray-500">No key decisions identified.</p>
-                                            {% endif %}
-                                        </div>
-                                        
-                                        <!-- Personal Commitments -->
-                                        <div class="bg-white rounded-lg p-4 border border-gray-200">
-                                            <h4 class="font-medium text-blue-600 mb-3">Personal Commitments</h4>
-                                            {% if transcript.commitments and transcript.commitments|length > 0 %}
-                                                <div class="space-y-2">
-                                                    {% for commitment in transcript.commitments %}
-                                                    <div class="flex items-center">
-                                                        <div class="bg-blue-100 rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold text-blue-600 mr-2">
-                                                            {{ commitment.person[:1] }}
-                                                        </div>
-                                                        <div class="flex-1">
-                                                            <p class="text-gray-800 text-sm">{{ commitment.commitment }}</p>
-                                                            <div class="flex flex-wrap gap-x-3 text-xs text-gray-500">
-                                                                <span>By: {{ commitment.person }}</span>
-                                                                {% if commitment.timeframe != "Not specified" %}
-                                                                <span>Timeframe: {{ commitment.timeframe }}</span>
-                                                                {% endif %}
-                                                                <span>Confidence: 
-                                                                    <span class="{% if commitment.confidence == 'High' %}text-green-600{% elif commitment.confidence == 'Low' %}text-red-600{% else %}text-yellow-600{% endif %}">
-                                                                        {{ commitment.confidence }}
-                                                                    </span>
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    {% endfor %}
-                                                </div>
-                                            {% else %}
-                                                <p class="text-gray-500">No personal commitments identified.</p>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Key Moments Panel -->
-                                <div id="panel-key-moments" class="p-5 hidden">
-                                    <div class="flex justify-between items-center mb-4">
-                                        <h3 class="text-lg font-medium text-primary-300">Key Visual Moments</h3>
-                                        <div class="flex space-x-2">
-                                            <select id="doc-format-select" class="text-xs bg-gray-100 border border-gray-300 rounded-lg px-2 py-1">
-                                                <option value="confluence">Confluence Format</option>
-                                                <option value="markdown">Markdown Format</option>
-                                                <option value="plain">Plain Text</option>
-                                            </select>
-                                            <button 
-                                                class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-full transition"
-                                                onclick="copyDocumentation()">
-                                                <span class="flex items-center">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                                    </svg>
-                                                    Copy All for Documentation
-                                                </span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Preview Box for Documentation Format -->
-                                    <div id="documentation-preview" class="mb-4 hidden border border-gray-200 rounded-lg p-4 bg-white text-sm">
-                                        <div class="flex justify-between items-center mb-2">
-                                            <h4 class="font-medium text-gray-700">Documentation Preview</h4>
-                                            <button onclick="toggleDocPreview()" class="text-xs text-gray-500 hover:text-gray-700">
-                                                Hide Preview
-                                            </button>
-                                        </div>
-                                        <div id="doc-preview-content" class="whitespace-pre-wrap font-mono text-gray-800 text-xs overflow-auto max-h-64 bg-gray-50 p-2 rounded"></div>
-                                    </div>
-                                    
-                                    {% if transcript.key_moments and transcript.key_moments|length > 0 %}
-                                        <div class="space-y-4">
-                                            {% for moment in transcript.key_moments %}
-                                                <div class="rounded-lg border border-gray-200 overflow-hidden">
-                                                    <div class="bg-gray-50 px-4 py-2 flex justify-between items-center">
-                                                        <h4 class="text-sm font-medium text-gray-700">{{ moment.title|default(moment.description[:30] ~ '...') }}</h4>
-                                                        <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-                                                            {{ moment.timestamp }}
-                                                        </span>
-                                                    </div>
-                                                    
-                                                    {% if moment.screenshot_path %}
-                                                        <div class="relative">
-                                                            <img src="{{ moment.screenshot_path }}" alt="{{ moment.title }}" class="w-full h-auto" 
-                                                                onerror="this.onerror=null; this.src='/static/img/placeholder.jpg';">
-                                                            <div class="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <button 
-                                                                    onclick="event.stopPropagation(); downloadImage('{{ moment.screenshot_path }}', 'screenshot_{{ loop.index }}.jpg')" 
-                                                                    class="bg-white/80 hover:bg-white p-1.5 rounded-full shadow-sm text-gray-700 hover:text-blue-600 transition-colors"
+
+                                                {% if moment.screenshot_path %}
+                                                    <div class="relative screenshot-container overflow-hidden">
+                                                        <!-- Make image clickable by wrapping in an anchor tag -->
+                                                        <a
+                                                            href="javascript:void(0);"
+                                                            onclick="openImagePreview('{{ moment.screenshot_path }}', '{{ moment.title|default('Key Moment ' ~ loop.index)|replace("'", "\\\\'") }}', '{{ moment.description|default('')|replace("'", "\\\\'") }}')"
+                                                            class="block"
+                                                        >
+                                                            <img
+                                                                src="{{ moment.screenshot_path }}"
+                                                                alt="{{ moment.title|default('Key Moment ' ~ loop.index) }}"
+                                                                class="w-full h-auto object-cover hover:brightness-90 transition-all duration-300"
+                                                                loading="lazy"
+                                                                onerror="this.onerror=null; this.src='/static/img/placeholder.jpg';"
+                                                            >
+                                                        </a>
+                                                        <!-- Overlay controls -->
+                                                        <div class="absolute inset-0 bg-black/0 hover:bg-black/20 transition-all duration-300 flex items-center justify-center opacity-0 hover:opacity-100">
+                                                            <div class="flex space-x-2">
+                                                                <button
+                                                                    onclick="openImagePreview('{{ moment.screenshot_path }}', '{{ moment.title|default('Key Moment ' ~ loop.index)|replace("'", "\\\\'") }}', '{{ moment.description|default('')|replace("'", "\\\\'") }}')"
+                                                                    class="bg-white/90 p-2 rounded-full shadow-sm text-primary-600 hover:bg-white transition-colors"
+                                                                    title="View full size">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                                                    </svg>
+                                                                </button>
+                                                                <button
+                                                                    onclick="event.stopPropagation(); downloadImage('{{ moment.screenshot_path }}', '{{ moment.title|default('screenshot')|replace("'", "\\\\'") }}.jpg')"
+                                                                    class="bg-white/90 p-2 rounded-full shadow-sm text-primary-600 hover:bg-white transition-colors"
                                                                     title="Download image">
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                                                     </svg>
                                                                 </button>
                                                             </div>
                                                         </div>
-                                                    {% else %}
-                                                        <div class="py-6 px-4 text-center bg-gray-50">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                            </svg>
-                                                            <span class="text-sm text-gray-500">Screenshot not available</span>
-                                                        </div>
+                                                    </div>
+                                                {% else %}
+                                                    <div class="py-6 px-4 text-center bg-gray-50 border-b border-gray-200">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                        </svg>
+                                                        <span class="text-sm text-gray-500">Screenshot not available</span>
+                                                    </div>
+                                                {% endif %}
+
+                                                <div class="p-4 bg-white">
+                                                    {% if moment.description %}
+                                                        <p class="text-sm text-gray-700 mb-3">{{ moment.description }}</p>
                                                     {% endif %}
-                                                    
-                                                    <div class="px-4 py-3 bg-white">
-                                                        <p class="text-sm text-gray-600 mb-2">{{ moment.description }}</p>
-                                                        
-                                                        {% if moment.transcript_text %}
-                                                        <div class="border-t border-gray-100 pt-2 mt-1">
-                                                            <div class="flex justify-between items-center mb-1">
-                                                                <span class="text-xs text-gray-500">Transcript:</span>
-                                                                <button 
-                                                                    onclick="event.stopPropagation(); copyText('{{ moment.transcript_text|replace("'", "\\'") }}')" 
-                                                                    class="text-xs text-blue-600 hover:text-blue-700 flex items-center">
+
+                                                    {% if moment.transcript_text %}
+                                                        <div class="border-t border-gray-100 pt-3">
+                                                            <div class="flex justify-between items-center mb-2">
+                                                                <h5 class="text-xs font-medium text-gray-500">Transcript Context:</h5>
+                                                                <button
+                                                                    onclick="event.stopPropagation(); copyText('{{ moment.transcript_text|replace("\n", " ")|replace("'", "\\\\'") }}')"
+                                                                    class="text-xs text-blue-600 hover:text-blue-800 flex items-center">
                                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" />
                                                                     </svg>
                                                                     Copy
                                                                 </button>
                                                             </div>
-                                                            <p class="text-xs text-gray-600 bg-gray-50 p-2 rounded">{{ moment.transcript_text }}</p>
-                                                            
-                                                            <button 
-                                                                class="mt-2 w-full text-xs text-blue-600 hover:text-blue-800 py-1 flex items-center justify-center"
+                                                            <div class="bg-gray-50 rounded-lg p-3 text-xs text-gray-700 max-h-36 overflow-auto scrollbar-thin whitespace-pre-wrap">
+                                                                {{ moment.transcript_text }}
+                                                            </div>
+
+                                                            <button
+                                                                class="mt-3 w-full text-xs py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition"
                                                                 onclick="jumpToTimestamp('{{ moment.timestamp }}')">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-                                                                </svg>
-                                                                Jump to this moment
+                                                                <span class="flex items-center justify-center">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                                                                    </svg>
+                                                                    Jump to this moment in transcript
+                                                                </span>
                                                             </button>
                                                         </div>
-                                                        {% endif %}
-                                                    </div>
+                                                    {% endif %}
                                                 </div>
-                                            {% endfor %}
-                                        </div>
-                                    {% else %}
-                                        <div class="bg-gray-50 rounded-lg border border-gray-200 p-6 text-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto mb-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                            <p class="text-gray-500 mb-2">No key visual moments identified</p>
-                                            <p class="text-xs text-gray-500">No segments with significant visual content were found in this transcript.</p>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            
-                            <!-- Search panel -->
-                            <div class="bg-white rounded-xl p-5 shadow-lg">
-                                <h3 class="text-lg font-medium mb-4 text-blue-700">Search Transcript</h3>
-                                <div class="relative">
-                                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                        <svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="bg-gray-50 rounded-lg border border-gray-200 p-6 text-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto mb-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                         </svg>
+                                        <p class="text-gray-500 mb-2">No key visual moments identified</p>
+                                        <p class="text-xs text-gray-500">No segments with significant visual content were found in this transcript.</p>
                                     </div>
-                                    <input type="text" id="search" class="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800" placeholder="Find words or phrases...">
-                                </div>
-                                <div id="search-results" class="mt-4 max-h-72 overflow-y-auto scrollbar-thin hidden">
-                                    <h4 class="text-sm font-medium mb-2 text-primary-300">Results (<span id="results-count">0</span>)</h4>
-                                    <ul id="results-list" class="space-y-2"></ul>
+                                {% endif %}
+
+                                <!-- Confluence Export Feature -->
+                                <div class="mt-8 bg-blue-50 rounded-xl p-5 border border-blue-200">
+                                    <h4 class="text-blue-700 font-medium mb-2 flex items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        Export for Confluence
+                                    </h4>
+                                    <p class="text-sm text-blue-600 mb-3">
+                                        Create documentation ready for Confluence with screenshots and transcript text
+                                    </p>
+
+                                    <div class="flex flex-wrap gap-2 mb-3">
+                                        <div class="bg-white rounded-lg p-2 flex items-center space-x-2 border border-blue-200">
+                                            <input type="checkbox" id="include-timestamps" class="rounded text-blue-600 focus:ring-blue-500" checked>
+                                            <label for="include-timestamps" class="text-sm">Include timestamps</label>
+                                        </div>
+
+                                        <div class="bg-white rounded-lg p-2 flex items-center space-x-2 border border-blue-200">
+                                            <input type="checkbox" id="include-descriptions" class="rounded text-blue-600 focus:ring-blue-500" checked>
+                                            <label for="include-descriptions" class="text-sm">Include descriptions</label>
+                                        </div>
+
+                                        <div class="bg-white rounded-lg p-2 flex items-center space-x-2 border border-blue-200">
+                                            <input type="checkbox" id="include-transcript" class="rounded text-blue-600 focus:ring-blue-500" checked>
+                                            <label for="include-transcript" class="text-sm">Include transcript text</label>
+                                        </div>
+                                    </div>
+
+                                    <button id="copy-confluence" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition flex items-center justify-center btn-hover">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                        </svg>
+                                        Copy All for Confluence
+                                    </button>
                                 </div>
                             </div>
-                            
-                            <!-- Transcript info -->
-                            <div class="bg-white rounded-xl p-5 shadow-lg">
-                                <h3 class="text-lg font-medium mb-4 text-blue-700">Transcript Info</h3>
-                                <div class="space-y-3 text-sm">
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-500">Duration:</span>
-                                        <span class="font-medium text-gray-800">
-                                            {% if transcript.segments and transcript.segments|length > 0 %}
-                                                {{ (transcript.segments[-1].end / 60)|int }}m {{ (transcript.segments[-1].end % 60)|int }}s
-                                            {% else %}
-                                                0m 0s
-                                            {% endif %}
-                                        </span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-500">Segments:</span>
-                                        <span class="font-medium text-gray-800">{{ transcript.segments|length }}</span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-500">Created:</span>
-                                        <span class="font-medium text-gray-800">{{ transcript.date.split('T')[0] if transcript.date else 'N/A' }}</span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-500">File:</span>
-                                        <span class="font-medium text-gray-800 truncate max-w-[150px]" title="{{ transcript.original_filename }}">{{ transcript.original_filename }}</span>
-                                    </div>
+                        </div>
+
+                        <!-- Search panel -->
+                        <div class="bg-white rounded-xl p-5 shadow-lg">
+                            <h3 class="text-lg font-medium mb-4 text-blue-700">Search Transcript</h3>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                    <svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <input type="text" id="search" class="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800" placeholder="Find words or phrases...">
+                            </div>
+                            <div id="search-results" class="mt-4 max-h-72 overflow-y-auto scrollbar-thin hidden">
+                                <h4 class="text-sm font-medium mb-2 text-primary-300">Results (<span id="results-count">0</span>)</h4>
+                                <ul id="results-list" class="space-y-2"></ul>
+                            </div>
+                        </div>
+
+                        <!-- Transcript info -->
+                        <div class="bg-white rounded-xl p-5 shadow-lg">
+                            <h3 class="text-lg font-medium mb-4 text-blue-700">Transcript Info</h3>
+                            <div class="space-y-3 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Duration:</span>
+                                    <span class="font-medium text-gray-800">
+                                        {% if transcript.segments and transcript.segments|length > 0 %}
+                                            {{ (transcript.segments[-1].end / 60)|int }}m {{ (transcript.segments[-1].end % 60)|int }}s
+                                        {% else %}
+                                            0m 0s
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Segments:</span>
+                                    <span class="font-medium text-gray-800">{{ transcript.segments|length }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Created:</span>
+                                    <span class="font-medium text-gray-800">{{ transcript.date.split('T')[0] if transcript.date else 'N/A' }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">File:</span>
+                                    <span class="font-medium text-gray-800 truncate max-w-[150px]" title="{{ transcript.original_filename }}">{{ transcript.original_filename }}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </section>
-        </main>
-        
-        <!-- Notification toast -->
-        <div id="notification-toast" class="fixed bottom-4 right-4 bg-blue-600 backdrop-blur-sm text-white rounded-lg shadow-lg p-4 max-w-xs transform translate-y-10 opacity-0 transition-all duration-300 pointer-events-none z-50 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-            </svg>
-            <span id="notification-message">Action completed successfully</span>
-        </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Notification toast -->
+    <div id="notification-toast" class="fixed bottom-4 right-4 bg-blue-600 backdrop-blur-sm text-white rounded-lg shadow-lg p-4 max-w-xs transform translate-y-10 opacity-0 transition-all duration-300 pointer-events-none z-50 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <span id="notification-message">Action completed successfully</span>
     </div>
-    <script src="/static/js/main.js"></script>
-    <script>
-        {% if transcript.segments and transcript.segments|length > 0 %}
-        const segments = JSON.parse('{{ transcript.segments|tojson }}');
-        const totalDuration = {{ transcript.segments[-1].end }};
-        {% else %}
-        const segments = []; // Empty segments array as fallback
-        const totalDuration = 0;
-        {% endif %}
-        let currentSegmentIndex = -1;
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            // Play/Scroll functionality
-            let isPlaying = false;
-            let scrollInterval;
-            const playBtn = document.getElementById('play-btn');
-            const speedSelect = document.getElementById('speed-select');
-            const transcriptContent = document.getElementById('transcript-content');
+</div>
+<script src="/static/js/main.js"></script>
+<script>
+    // IMPROVED SEGMENTS INITIALIZATION
+    {% if transcript.segments and transcript.segments|length > 0 %}
+    // Safely parse segments by ensuring they have required properties
+    let rawSegments = {{ transcript.segments|tojson }};
+    console.log("Raw segments object:", typeof rawSegments);
+    console.log("Raw segments length:", rawSegments.length);
+    console.log("First raw segment:", rawSegments[0]);
+    
+    const segments = rawSegments.map((segment, index) => {
+        return {
+            start: segment.start || 0,
+            end: segment.end || 0, 
+            text: segment.text || `Segment ${index+1}`,
+            // Copy any other properties
+            ...segment
+        };
+    });
+    const totalDuration = segments.length > 0 ? (segments[segments.length - 1].end || 0) : 0;
+    console.log(`Processed ${segments.length} segments, total duration: ${totalDuration}s`);
 
-            function startScrolling() {
-                const speed = parseFloat(speedSelect.value);
-                const pixelsPerSecond = 50 / speed; // Adjust this for smoother/faster scrolling
-                
-                scrollInterval = setInterval(() => {
-                    if (segments.length === 0) {
-                        stopScrolling();
-                        return;
-                    }
-                    
-                    const lastTime = totalDuration;
-                    const currentTime = parseFloat(document.getElementById('current-time').textContent.split(':').reduce((acc, time) => (60 * acc) + +time));
-                    const nextTime = currentTime + (1 / speed);
-                    if (nextTime >= lastTime) {
-                        stopScrolling();
-                        return;
-                    }
-
-                    const nextSegment = segments.find(s => s.start >= nextTime) || segments[segments.length - 1];
-                    const segmentIndex = segments.indexOf(nextSegment);
-                    
-                    // Update timeline and current time without scrolling the whole page
-                    document.getElementById('current-time').textContent = formatTime(nextSegment.start);
-                    document.getElementById('timeline-progress').style.width = (nextSegment.start / lastTime * 100) + '%';
-                    document.querySelectorAll('.timeline-segment')[segmentIndex].classList.add('active');
-                    if (currentSegmentIndex >= 0 && currentSegmentIndex !== segmentIndex) {
-                        document.querySelectorAll('.timeline-segment')[currentSegmentIndex].classList.remove('active');
-                    }
-                    currentSegmentIndex = segmentIndex;
-
-                    // Scroll only the transcript content
-                    const segmentElement = document.getElementById('segment-' + segmentIndex);
-                    if (segmentElement) {
-                        transcriptContent.scrollTop = segmentElement.offsetTop - transcriptContent.offsetTop - 50; // Offset to keep some context above
-                    }
-                }, 1000);
-            }
-
-            function stopScrolling() {
-                clearInterval(scrollInterval);
-                isPlaying = false;
-                playBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
-            }
-
-            if (playBtn) {
-                playBtn.addEventListener('click', () => {
-                    if (isPlaying) {
-                        stopScrolling();
-                    } else {
-                        isPlaying = true;
-                        playBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>'; // Pause icon
-                        startScrolling();
-                    }
-                });
-            }
-
-            const rewindBtn = document.getElementById('rewind-btn');
-            if (rewindBtn) {
-                rewindBtn.addEventListener('click', () => {
-                    if (segments.length === 0) return;
-                    
-                    const currentTime = parseFloat(document.getElementById('current-time').textContent.split(':').reduce((acc, time) => (60 * acc) + +time));
-                    const newTime = Math.max(0, currentTime - 10);
-                    const newSegment = segments.find(s => s.start >= newTime) || segments[0];
-                    jumpToSegment(segments.indexOf(newSegment));
-                });
-            }
-            
-            // Add timeline click functionality
-            const timelineContainer = document.getElementById('timeline-container');
-            if (timelineContainer) {
-                timelineContainer.addEventListener('click', function(e) {
-                    if (segments.length === 0) return;
-                    
-                    const rect = this.getBoundingClientRect();
-                    const clickX = e.clientX - rect.left;
-                    const percentage = (clickX / rect.width);
-                    
-                    // Get timestamp at click position
-                    const clickedTime = percentage * totalDuration;
-                    
-                    // Find closest segment to the clicked time
-                    let closestSegment = 0;
-                    let minDistance = Number.MAX_VALUE;
-                    
-                    segments.forEach((segment, index) => {
-                        const distance = Math.abs(segment.start - clickedTime);
-                        if (distance < minDistance) {
-                            minDistance = distance;
-                            closestSegment = index;
-                        }
-                    });
-                    
-                    // Jump to that segment
-                    jumpToSegment(closestSegment);
-                });
-            }
-            
-            // Search functionality
-            const searchInput = document.getElementById('search');
-            const transcriptSearchInput = document.getElementById('transcript-search');
-            const searchResults = document.getElementById('search-results');
-            const resultsList = document.getElementById('results-list');
-            const resultsCount = document.getElementById('results-count');
-            
-            // Connect the two search inputs
-            if (transcriptSearchInput && searchInput) {
-                transcriptSearchInput.addEventListener('input', function() {
-                    searchInput.value = this.value;
-                    searchInput.dispatchEvent(new Event('input'));
-                });
-            
-                searchInput.addEventListener('input', function() {
-                    transcriptSearchInput.value = this.value;
-                    const searchTerm = this.value.toLowerCase().trim();
-                    highlightSearchTermInSegments(searchTerm);
-                });
-            }
-            
-            // Close search results
-            const closeSearchResults = document.getElementById('close-search-results');
-            if (closeSearchResults) {
-                closeSearchResults.addEventListener('click', function() {
-                    document.getElementById('search-results').classList.add('hidden');
-                });
-            }
-            
-            // Delete modal functionality
-            const deleteModal = document.getElementById('delete-modal');
-            const cancelDeleteBtn = document.getElementById('cancel-delete');
-            const confirmDeleteBtn = document.getElementById('confirm-delete');
-            
-            if (cancelDeleteBtn) {
-                cancelDeleteBtn.addEventListener('click', function() {
-                    deleteModal.classList.add('hidden');
-                });
-            }
-            
-            if (confirmDeleteBtn) {
-                confirmDeleteBtn.addEventListener('click', function() {
-                    fetch('/delete/{{ transcript.id }}', {
-                        method: 'POST',
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            window.location.href = '/dashboard';
-                        } else {
-                            alert('Error deleting transcript: ' + (data.error || 'Unknown error'));
-                            deleteModal.classList.add('hidden');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('An error occurred while deleting the transcript');
-                        deleteModal.classList.add('hidden');
-                    });
-                });
-            }
-            
-            // Add playhead indicator
-            const playhead = document.getElementById('playhead');
-            
-            if (timelineContainer && playhead) {
-                timelineContainer.addEventListener('mousemove', function(e) {
-                    const rect = this.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const percentage = (x / rect.width) * 100;
-                    
-                    playhead.style.left = `${percentage}%`;
-                    playhead.classList.remove('hidden');
-                    
-                    // Calculate time at this position
-                    const timeAt = (percentage / 100) * totalDuration;
-                    
-                    // Show time tooltip
-                    playhead.setAttribute('title', formatTime(timeAt));
-                });
-                
-                timelineContainer.addEventListener('mouseleave', function() {
-                    playhead.classList.add('hidden');
-                });
-            }
-            
-            // Check for URL parameters for search
-            const urlParams = new URLSearchParams(window.location.search);
-            const searchParam = urlParams.get('search');
-            if (searchParam && searchInput) {
-                searchInput.value = searchParam;
-                if (transcriptSearchInput) {
-                    transcriptSearchInput.value = searchParam;
-                }
-                highlightSearchTermInSegments(searchParam);
-            }
-            
-            // Make Summary the active tab by default
-            switchTab('summary');
+    // Detailed debugging for segments
+    console.log(`Segments array type: ${typeof segments}, is array: ${Array.isArray(segments)}`);
+    if (Array.isArray(segments) && segments.length > 0) {
+        console.log(`First segment:`, segments[0]);
+        console.log(`Required properties:`, {
+            start: segments[0].start !== undefined, 
+            end: segments[0].end !== undefined,
+            text: segments[0].text !== undefined
         });
         
-        // Function to switch between tabs
-        function switchTab(tabName) {
-            console.log(`Switching to tab: ${tabName}`);
-            
-            // Hide all panels
-            const panels = [
-                'panel-summary', 
-                'panel-topics', 
-                'panel-insights', 
-                'panel-key-moments'
-            ];
-            
-            panels.forEach(panelId => {
-                const panel = document.getElementById(panelId);
-                if (panel) {
-                    panel.classList.add('hidden');
-                }
-            });
-            
-            // Reset all tab buttons
-            const tabButtons = [
-                'tab-summary', 
-                'tab-topics', 
-                'tab-insights', 
-                'tab-key-moments'
-            ];
-            
-            tabButtons.forEach(tabId => {
-                const tab = document.getElementById(tabId);
-                if (tab) {
-                    tab.classList.remove('border-primary-500', 'text-primary-300', 'border-blue-500', 'text-blue-700');
-                    tab.classList.add('border-transparent', 'text-gray-400');
-                }
-            });
-            
-            // Show selected panel and active tab
-            const selectedPanel = document.getElementById(`panel-${tabName}`);
-            if (selectedPanel) {
-                selectedPanel.classList.remove('hidden');
-            } else {
-                console.warn(`Panel not found: panel-${tabName}`);
+        // Directly inspect segment DOM elements
+        setTimeout(() => {
+            const segmentElements = document.querySelectorAll('.segment');
+            console.log(`Found ${segmentElements.length} segment elements in DOM`);
+            if (segmentElements.length === 0) {
+                console.error('No segment elements found in DOM despite having segments data!');
             }
-            
-            const selectedTab = document.getElementById(`tab-${tabName}`);
-            if (selectedTab) {
-                selectedTab.classList.remove('border-transparent', 'text-gray-400');
-                selectedTab.classList.add('border-primary-500', 'text-primary-300');
-            } else {
-                console.warn(`Tab button not found: tab-${tabName}`);
-            }
-            
-            console.log(`Switched to tab: ${tabName}`);
+        }, 1000);
+    }
+    {% else %}
+    const segments = []; // Empty segments array as fallback
+    const totalDuration = 0;
+    {% endif %}
+
+    {% if transcript.key_moments and transcript.key_moments|length > 0 %}
+    const keyMoments = JSON.parse('{{ transcript.key_moments|tojson }}');
+    {% else %}
+    const keyMoments = []; // Empty key moments array as fallback
+    {% endif %}
+
+    let currentSegmentIndex = -1;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Image Preview Modal functionality
+        const imageModal = document.getElementById('image-preview-modal');
+        const modalImage = document.getElementById('modal-image');
+        const modalTitle = document.getElementById('modal-image-title');
+        const modalDescription = document.getElementById('modal-image-description');
+        const closeImagePreview = document.getElementById('close-image-preview');
+        const downloadImageBtn = document.getElementById('download-image');
+
+        if (closeImagePreview) {
+            closeImagePreview.addEventListener('click', function() {
+                imageModal.classList.add('hidden');
+            });
         }
-        
-        // Function to jump to a specific segment in the transcript
-        function jumpToSegment(index) {
-            if (segments.length === 0 || index < 0 || index >= segments.length) {
-                return;
-            }
-            
-            if (currentSegmentIndex >= 0) {
-                const currentSegmentElement = document.getElementById('segment-' + currentSegmentIndex);
-                if (currentSegmentElement) {
-                    currentSegmentElement.classList.remove('bg-gray-100');
+
+        if (imageModal) {
+            imageModal.addEventListener('click', function(e) {
+                if (e.target === imageModal) {
+                    imageModal.classList.add('hidden');
                 }
-                
-                const currentTimelineSegments = document.querySelectorAll('.timeline-segment');
-                if (currentTimelineSegments.length > currentSegmentIndex) {
-                    currentTimelineSegments[currentSegmentIndex].classList.remove('active');
+            });
+        }
+
+        if (downloadImageBtn) {
+            downloadImageBtn.addEventListener('click', function() {
+                const imgSrc = modalImage.src;
+                const title = modalTitle.textContent || 'screenshot';
+                downloadImage(imgSrc, `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.jpg`);
+            });
+        }
+
+        // Play/Scroll functionality
+        let isPlaying = false;
+        let scrollInterval;
+        const playBtn = document.getElementById('play-btn');
+        const speedSelect = document.getElementById('speed-select');
+        const transcriptContent = document.getElementById('transcript-content');
+
+        function startScrolling() {
+            const speed = parseFloat(speedSelect.value);
+            const pixelsPerSecond = 50 / speed; // Adjust this for smoother/faster scrolling
+
+            scrollInterval = setInterval(() => {
+                if (segments.length === 0) {
+                    stopScrolling();
+                    return;
                 }
+
+                const lastTime = totalDuration;
+                const currentTime = parseFloat(document.getElementById('current-time').textContent.split(':').reduce((acc, time) => (60 * acc) + +time));
+                const nextTime = currentTime + (1 / speed);
+                if (nextTime >= lastTime) {
+                    stopScrolling();
+                    return;
+                }
+
+                const nextSegment = segments.find(s => s.start >= nextTime) || segments[segments.length - 1];
+                const segmentIndex = segments.indexOf(nextSegment);
+
+                // Update timeline and current time without scrolling the whole page
+                document.getElementById('current-time').textContent = formatTime(nextSegment.start);
+                document.getElementById('timeline-progress').style.width = (nextSegment.start / lastTime * 100) + '%';
+                document.querySelectorAll('.timeline-segment')[segmentIndex].classList.add('active');
+                if (currentSegmentIndex >= 0 && currentSegmentIndex !== segmentIndex) {
+                    document.querySelectorAll('.timeline-segment')[currentSegmentIndex].classList.remove('active');
+                }
+                currentSegmentIndex = segmentIndex;
+
+                // Scroll only the transcript content
+                const segmentElement = document.getElementById('segment-' + segmentIndex);
+                if (segmentElement) {
+                    transcriptContent.scrollTop = segmentElement.offsetTop - transcriptContent.offsetTop - 50; // Offset to keep some context above
+                }
+            }, 1000);
+        }
+
+        function stopScrolling() {
+            clearInterval(scrollInterval);
+            isPlaying = false;
+            playBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
+        }
+
+        if (playBtn) {
+            playBtn.addEventListener('click', () => {
+                if (isPlaying) {
+                    stopScrolling();
+                } else {
+                    isPlaying = true;
+                    playBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>'; // Pause icon
+                    startScrolling();
+                }
+            });
+        }
+
+        const rewindBtn = document.getElementById('rewind-btn');
+        if (rewindBtn) {
+            rewindBtn.addEventListener('click', () => {
+                if (segments.length === 0) return;
+
+                const currentTime = parseFloat(document.getElementById('current-time').textContent.split(':').reduce((acc, time) => (60 * acc) + +time));
+                const newTime = Math.max(0, currentTime - 10);
+                const newSegment = segments.find(s => s.start >= newTime) || segments[0];
+                jumpToSegment(segments.indexOf(newSegment));
+            });
+        }
+
+        // Add timeline click functionality
+        const timelineContainer = document.getElementById('timeline-container');
+        if (timelineContainer) {
+            timelineContainer.addEventListener('click', function(e) {
+                if (segments.length === 0) return;
+
+                const rect = this.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const percentage = (clickX / rect.width);
+
+                // Get timestamp at click position
+                const clickedTime = percentage * totalDuration;
+
+                // Find closest segment to the clicked time
+                let closestSegment = 0;
+                let minDistance = Number.MAX_VALUE;
+
+                segments.forEach((segment, index) => {
+                    const distance = Math.abs(segment.start - clickedTime);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestSegment = index;
+                    }
+                });
+
+                // Jump to that segment
+                jumpToSegment(closestSegment);
+            });
+        }
+
+        // Search functionality
+        const searchInput = document.getElementById('search');
+        const transcriptSearchInput = document.getElementById('transcript-search');
+        const searchResults = document.getElementById('search-results');
+        const resultsList = document.getElementById('results-list');
+        const resultsCount = document.getElementById('results-count');
+
+        // Connect the two search inputs
+        if (transcriptSearchInput && searchInput) {
+            transcriptSearchInput.addEventListener('input', function() {
+                searchInput.value = this.value;
+                searchInput.dispatchEvent(new Event('input'));
+            });
+
+            searchInput.addEventListener('input', function() {
+                transcriptSearchInput.value = this.value;
+                const searchTerm = this.value.toLowerCase().trim();
+                highlightSearchTermInSegments(searchTerm);
+            });
+        }
+
+        // Close search results
+        const closeSearchResults = document.getElementById('close-search-results');
+        if (closeSearchResults) {
+            closeSearchResults.addEventListener('click', function() {
+                document.getElementById('search-results').classList.add('hidden');
+            });
+        }
+
+        // Delete modal functionality
+        const deleteModal = document.getElementById('delete-modal');
+        const cancelDeleteBtn = document.getElementById('cancel-delete');
+        const confirmDeleteBtn = document.getElementById('confirm-delete');
+
+        if (cancelDeleteBtn) {
+            cancelDeleteBtn.addEventListener('click', function() {
+                deleteModal.classList.add('hidden');
+            });
+        }
+
+        if (confirmDeleteBtn) {
+            confirmDeleteBtn.addEventListener('click', function() {
+                fetch('/delete/{{ transcript.id }}', {
+                    method: 'POST',
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = '/dashboard';
+                    } else {
+                        alert('Error deleting transcript: ' + (data.error || 'Unknown error'));
+                        deleteModal.classList.add('hidden');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while deleting the transcript');
+                    deleteModal.classList.add('hidden');
+                });
+            });
+        }
+
+        // Add playhead indicator
+        const playhead = document.getElementById('playhead');
+
+        if (timelineContainer && playhead) {
+            timelineContainer.addEventListener('mousemove', function(e) {
+                const rect = this.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const percentage = (x / rect.width) * 100;
+
+                playhead.style.left = `${percentage}%`;
+                playhead.classList.remove('hidden');
+
+                // Calculate time at this position
+                const timeAt = (percentage / 100) * totalDuration;
+
+                // Show time tooltip
+                playhead.setAttribute('title', formatTime(timeAt));
+            });
+
+            timelineContainer.addEventListener('mouseleave', function() {
+                playhead.classList.add('hidden');
+            });
+        }
+
+        // Check for URL parameters for search
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchParam = urlParams.get('search');
+        if (searchParam && searchInput) {
+            searchInput.value = searchParam;
+            if (transcriptSearchInput) {
+                transcriptSearchInput.value = searchParam;
             }
-            
-            currentSegmentIndex = index;
-            const segment = segments[index];
-            
-            const segmentElement = document.getElementById('segment-' + index);
-            if (segmentElement) {
-                segmentElement.classList.add('bg-gray-100');
+            highlightSearchTermInSegments(searchParam);
+        }
+
+        // Make Summary the active tab by default
+        switchTab('summary');
+
+        // Set up Confluence export functionality
+        const copyConfluenceBtn = document.getElementById('copy-confluence');
+        if (copyConfluenceBtn) {
+            copyConfluenceBtn.addEventListener('click', function() {
+                generateAndCopyConfluenceFormat();
+            });
+        }
+    });
+
+    // IMPROVED JUMP TO SEGMENT FUNCTION
+    function jumpToSegment(index) {
+        console.log(`Jumping to segment at index: ${index}`);
+        if (!segments || segments.length === 0 || index < 0 || index >= segments.length) {
+            console.error(`Invalid segment index: ${index}, total segments: ${segments ? segments.length : 0}`);
+            return;
+        }
+
+        // Clear previous highlighting
+        if (currentSegmentIndex >= 0) {
+            const currentSegmentElement = document.getElementById('segment-' + currentSegmentIndex);
+            if (currentSegmentElement) {
+                currentSegmentElement.classList.remove('bg-gray-100');
             }
-            
-            const timelineSegments = document.querySelectorAll('.timeline-segment');
-            if (timelineSegments.length > index) {
-                timelineSegments[index].classList.add('active');
+
+            const currentTimelineSegments = document.querySelectorAll('.timeline-segment');
+            if (currentTimelineSegments.length > currentSegmentIndex) {
+                currentTimelineSegments[currentSegmentIndex].classList.remove('active');
             }
-            
-            const currentTimeElement = document.getElementById('current-time');
-            if (currentTimeElement) {
-                currentTimeElement.textContent = formatTime(segment.start);
-            }
-            
+        }
+
+        currentSegmentIndex = index;
+        const segment = segments[index];
+        console.log(`Selected segment:`, segment);
+
+        // Highlight the segment in the transcript
+        const segmentElement = document.getElementById('segment-' + index);
+        if (segmentElement) {
+            segmentElement.classList.add('bg-gray-100');
+            console.log(`Found and highlighted segment element: #segment-${index}`);
+        } else {
+            console.error(`Segment element not found: #segment-${index}`);
+        }
+
+        // Highlight the segment in the timeline
+        const timelineSegments = document.querySelectorAll('.timeline-segment');
+        if (timelineSegments.length > index) {
+            timelineSegments[index].classList.add('active');
+        }
+
+        // Update the current time display
+        const currentTimeElement = document.getElementById('current-time');
+        if (currentTimeElement && segment.start !== undefined) {
+            currentTimeElement.textContent = formatTime(segment.start);
+        }
+
+        // Scroll the transcript to show the segment
+        if (segmentElement) {
             const transcriptContent = document.getElementById('transcript-content');
-            if (segmentElement && transcriptContent) {
+            if (transcriptContent) {
                 // Calculate the scroll position to center the segment in view
                 const segmentTop = segmentElement.offsetTop;
                 const containerHeight = transcriptContent.clientHeight;
                 const segmentHeight = segmentElement.clientHeight;
-                
+
                 // Scroll to position (subtracting a small offset to show some context)
                 transcriptContent.scrollTop = segmentTop - (containerHeight / 2) + (segmentHeight / 2);
-            }
-            
-            const timelineProgress = document.getElementById('timeline-progress');
-            if (timelineProgress) {
-                timelineProgress.style.width = (segment.start / totalDuration * 100) + '%';
+                console.log(`Scrolled to segment, offsetTop: ${segmentTop}, new scrollTop: ${transcriptContent.scrollTop}`);
             }
         }
-        
-        // Function to handle search functionality
-        function highlightSearchTermInSegments(searchTerm) {
-            if (segments.length === 0) return;
-            
-            // Clear previous highlighting
-            document.querySelectorAll('.segment-text').forEach(function(el, index) {
-                if (index < segments.length) {
-                    el.textContent = segments[index].text;
-                }
-            });
-            
-            const searchResults = document.getElementById('search-results');
-            
-            if (searchTerm.length < 2 || !searchResults) {
-                if (searchResults) {
-                    searchResults.classList.add('hidden');
-                }
-                return;
+
+        // Update the timeline progress bar
+        const timelineProgress = document.getElementById('timeline-progress');
+        if (timelineProgress && segment.start !== undefined && totalDuration > 0) {
+            const progressWidth = (segment.start / totalDuration * 100);
+            timelineProgress.style.width = progressWidth + '%';
+            console.log(`Updated timeline progress to ${progressWidth.toFixed(2)}%`);
+        }
+    }
+
+    // Function to open image preview modal
+    function openImagePreview(imageSrc, title, description) {
+        const imageModal = document.getElementById('image-preview-modal');
+        const modalImage = document.getElementById('modal-image');
+        const modalTitle = document.getElementById('modal-image-title');
+        const modalDescription = document.getElementById('modal-image-description');
+        const downloadImageBtn = document.getElementById('download-image');
+
+        if (imageModal && modalImage) {
+            modalImage.src = imageSrc;
+            if (modalTitle) modalTitle.textContent = title || '';
+            if (modalDescription) modalDescription.textContent = description || '';
+
+            // Set download attributes
+            if (downloadImageBtn) {
+                downloadImageBtn.setAttribute('data-src', imageSrc);
+                downloadImageBtn.setAttribute('data-filename', `${title ? title.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'screenshot'}.jpg`);
             }
-            
-            // Search in segments and highlight matches
-            const results = [];
-            segments.forEach(function(segment, index) {
-                const segmentText = segment.text.toLowerCase();
-                if (segmentText.includes(searchTerm)) {
-                    // Highlight the text
-                    const segmentElements = document.querySelectorAll('.segment-text');
-                    if (index < segmentElements.length) {
-                        const segmentEl = segmentElements[index];
-                        const regex = new RegExp('(' + searchTerm + ')', 'gi');
-                        segmentEl.innerHTML = segment.text.replace(regex, '<span class="bg-primary-900/70 text-primary-200 px-0.5 rounded">$1</span>');
-                    }
-                    
-                    // Add to results
-                    results.push({
-                        index: index,
-                        text: segment.text,
-                        start: segment.start
-                    });
-                }
-            });
-            
-            // Update results list
-            const resultsList = document.getElementById('results-list');
-            const resultsCount = document.getElementById('results-count');
-            
-            if (resultsList && resultsCount) {
-                resultsList.innerHTML = '';
-                results.forEach(function(result) {
-                    const item = document.createElement('li');
-                    item.className = 'p-2 rounded-lg hover:bg-dark-900/50 cursor-pointer transition-colors';
-                    
-                    const time = document.createElement('div');
-                    time.className = 'text-xs text-primary-400 font-medium';
-                    time.textContent = formatTime(result.start);
-                    
-                    const text = document.createElement('p');
-                    text.className = 'text-sm';
+
+            imageModal.classList.remove('hidden');
+        }
+    }
+
+    // Function to switch between tabs
+    function switchTab(tabName) {
+        console.log(`Switching to tab: ${tabName}`);
+
+        // Hide all panels
+        const panels = [
+            'panel-summary',
+            'panel-topics',
+            'panel-insights',
+            'panel-key-moments'
+        ];
+
+        panels.forEach(panelId => {
+            const panel = document.getElementById(panelId);
+            if (panel) {
+                panel.classList.add('hidden');
+            }
+        });
+
+        // Reset all tab buttons
+        const tabButtons = [
+            'tab-summary',
+            'tab-topics',
+            'tab-insights',
+            'tab-key-moments'
+        ];
+
+        tabButtons.forEach(tabId => {
+            const tab = document.getElementById(tabId);
+            if (tab) {
+                tab.classList.remove('border-primary-500', 'text-primary-300', 'border-blue-500', 'text-blue-700');
+                tab.classList.add('border-transparent', 'text-gray-400');
+            }
+        });
+
+        // Show selected panel and active tab
+        const selectedPanel = document.getElementById(`panel-${tabName}`);
+        if (selectedPanel) {
+            selectedPanel.classList.remove('hidden');
+        } else {
+            console.warn(`Panel not found: panel-${tabName}`);
+        }
+
+        const selectedTab = document.getElementById(`tab-${tabName}`);
+        if (selectedTab) {
+            selectedTab.classList.remove('border-transparent', 'text-gray-400');
+            selectedTab.classList.add('border-primary-500', 'text-primary-300');
+        } else {
+            console.warn(`Tab button not found: tab-${tabName}`);
+        }
+
+        console.log(`Switched to tab: ${tabName}`);
+    }
+
+    // Function to handle search functionality
+    function highlightSearchTermInSegments(searchTerm) {
+        if (segments.length === 0) return;
+
+        // Clear previous highlighting
+        document.querySelectorAll('.segment-text').forEach(function(el, index) {
+            if (index < segments.length) {
+                el.textContent = segments[index].text;
+            }
+        });
+
+        const searchResults = document.getElementById('search-results');
+
+        if (searchTerm.length < 2 || !searchResults) {
+            if (searchResults) {
+                searchResults.classList.add('hidden');
+            }
+            return;
+        }
+
+        // Search in segments and highlight matches
+        const results = [];
+        segments.forEach(function(segment, index) {
+            const segmentText = segment.text.toLowerCase();
+            if (segmentText.includes(searchTerm)) {
+                // Highlight the text
+                const segmentElements = document.querySelectorAll('.segment-text');
+                if (index < segmentElements.length) {
+                    const segmentEl = segmentElements[index];
                     const regex = new RegExp('(' + searchTerm + ')', 'gi');
-                    text.innerHTML = result.text.replace(regex, '<span class="bg-primary-900/70 text-primary-200 px-0.5 rounded">$1</span>');
-                    
-                    item.appendChild(time);
-                    item.appendChild(text);
-                    
-                    item.addEventListener('click', function() {
-                        jumpToSegment(result.index);
-                    });
-                    
-                    resultsList.appendChild(item);
-                });
-                
-                // Update count and show results
-                resultsCount.textContent = results.length;
-                
-                if (results.length > 0) {
-                    searchResults.classList.remove('hidden');
-                } else {
-                    searchResults.classList.add('hidden');
+                    segmentEl.innerHTML = segment.text.replace(regex, '<span class="bg-primary-900/70 text-primary-200 px-0.5 rounded">$1</span>');
                 }
+
+                // Add to results
+                results.push({
+                    index: index,
+                    text: segment.text,
+                    start: segment.start
+                });
             }
-        }
-        
-        // Function to format time from seconds to minutes:seconds
-        function formatTime(seconds) {
-            const mins = Math.floor(seconds / 60);
-            const secs = Math.floor(seconds % 60);
-            return mins + ':' + secs.toString().padStart(2, '0');
-        }
-        
-        // Function to open video location
-        function openVideoLocation() {
-            alert('Video file location: {{ transcript.filepath }}');
-        }
-        
-        // Function to delete transcript
-        function deleteTranscript() {
-            const deleteModal = document.getElementById('delete-modal');
-            if (deleteModal) {
-                deleteModal.classList.remove('hidden');
-            }
-        }
-        
-        // Function to format LLM output (convert newlines to HTML, handle bullet points, etc.)
-        function formatOutput(text) {
-            if (!text) return '';
-            
-            // Convert newlines to <br>
-            let formatted = text.replace(/\n/g, '<br>');
-            
-            // Handle bullet points (lines starting with - or *)
-            formatted = formatted.replace(/(?:<br>|^)([\s]*[-*][\s]+)(.+?)(?=<br>|$)/g, '<br><span class="inline-block w-2 h-2 bg-primary-400 rounded-full mr-2"></span>$2');
-            
-            return formatted;
-        }
-        
-        // Function to show toast notifications
-        function showNotification(message, isError = false) {
-            const toast = document.getElementById('notification-toast');
-            const toastMessage = document.getElementById('notification-message');
-            
-            if (!toast || !toastMessage) return;
-            
-            toastMessage.textContent = message;
-            
-            if (isError) {
-                toast.classList.remove('bg-blue-600', 'text-white');
-                toast.classList.add('bg-red-600', 'text-white');
+        });
+
+        // Update results list
+        const resultsList = document.getElementById('results-list');
+        const resultsCount = document.getElementById('results-count');
+
+        if (resultsList && resultsCount) {
+            resultsList.innerHTML = '';
+            results.forEach(function(result) {
+                const item = document.createElement('li');
+                item.className = 'p-2 rounded-lg hover:bg-dark-900/50 cursor-pointer transition-colors';
+
+                const time = document.createElement('div');
+                time.className = 'text-xs text-primary-400 font-medium';
+                time.textContent = formatTime(result.start);
+
+                const text = document.createElement('p');
+                text.className = 'text-sm';
+                const regex = new RegExp('(' + searchTerm + ')', 'gi');
+                text.innerHTML = result.text.replace(regex, '<span class="bg-primary-900/70 text-primary-200 px-0.5 rounded">$1</span>');
+
+                item.appendChild(time);
+                item.appendChild(text);
+
+                item.addEventListener('click', function() {
+                    jumpToSegment(result.index);
+                });
+
+                resultsList.appendChild(item);
+            });
+
+            // Update count and show results
+            resultsCount.textContent = results.length;
+
+            if (results.length > 0) {
+                searchResults.classList.remove('hidden');
             } else {
-                toast.classList.remove('bg-red-600', 'text-white');
-                toast.classList.add('bg-blue-600', 'text-white');
+                searchResults.classList.add('hidden');
             }
-            
-            // Show the toast
-            toast.classList.remove('translate-y-10', 'opacity-0');
-            toast.classList.add('translate-y-0', 'opacity-100');
-            
-            // Hide after 3 seconds
+        }
+    }
+
+    // Function to format time from seconds to minutes:seconds
+    function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return mins + ':' + secs.toString().padStart(2, '0');
+    }
+
+    // Function to open video location
+    function openVideoLocation() {
+        alert('Video file location: {{ transcript.filepath }}');
+    }
+
+    // Function to delete transcript
+    function deleteTranscript() {
+        const deleteModal = document.getElementById('delete-modal');
+        if (deleteModal) {
+            deleteModal.classList.remove('hidden');
+        }
+    }
+
+    // Function to format LLM output (convert newlines to HTML, handle bullet points, etc.)
+    function formatOutput(text) {
+        if (!text) return '';
+
+        // Convert newlines to <br>
+        let formatted = text.replace(/\\n/g, '<br>');
+
+        // Handle bullet points (lines starting with - or *)
+        formatted = formatted.replace(/(?:<br>|^)([\\s]*[-*][\\s]+)(.+?)(?=<br>|$)/g, '<br><span class="inline-block w-2 h-2 bg-primary-400 rounded-full mr-2"></span>$2');
+
+        return formatted;
+    }
+
+    // Function to show toast notifications
+    function showNotification(message, isError = false) {
+        const toast = document.getElementById('notification-toast');
+        const toastMessage = document.getElementById('notification-message');
+
+        if (!toast || !toastMessage) return;
+
+        toastMessage.textContent = message;
+
+        if (isError) {
+            toast.classList.remove('bg-blue-600', 'text-white');
+            toast.classList.add('bg-red-600', 'text-white');
+        } else {
+            toast.classList.remove('bg-red-600', 'text-white');
+            toast.classList.add('bg-blue-600', 'text-white');
+        }
+
+        // Show the toast
+        toast.classList.remove('translate-y-10', 'opacity-0');
+        toast.classList.add('translate-y-0', 'opacity-100');
+
+        // Hide after 3 seconds
+        setTimeout(() => {
+            toast.classList.remove('translate-y-0', 'opacity-100');
+            toast.classList.add('translate-y-10', 'opacity-0');
+        }, 3000);
+    }
+
+    // Function to copy segment text
+    function copySegmentText(index) {
+        if (segments.length === 0 || index < 0 || index >= segments.length) return;
+
+        const text = segments[index].text;
+        navigator.clipboard.writeText(text)
+            .then(() => {
+                showNotification('Segment text copied to clipboard');
+            })
+            .catch(err => {
+                console.error('Could not copy text: ', err);
+                showNotification('Failed to copy text', true);
+            });
+    }
+
+    // Function to toggle between normal and condensed views
+    function toggleTranscriptView() {
+        const transcriptContent = document.getElementById('transcript-content');
+        const segments = document.querySelectorAll('.segment');
+        const viewModeButton = document.getElementById('view-mode-toggle');
+        const viewModeText = document.getElementById('view-mode-text');
+
+        if (!transcriptContent || !viewModeText) return;
+
+        // Check current mode
+        const isCondensed = transcriptContent.classList.contains('condensed-view');
+
+        if (isCondensed) {
+            // Switch to normal view
+            transcriptContent.classList.remove('condensed-view');
+            segments.forEach(segment => {
+                segment.classList.remove('condensed');
+                segment.classList.remove('py-1', 'px-2', 'mb-1');
+                segment.classList.add('mb-3', 'p-3');
+            });
+            viewModeText.textContent = 'Condensed';
+        } else {
+            // Switch to condensed view
+            transcriptContent.classList.add('condensed-view');
+            segments.forEach(segment => {
+                segment.classList.add('condensed');
+                segment.classList.remove('mb-3', 'p-3');
+                segment.classList.add('py-1', 'px-2', 'mb-1');
+            });
+            viewModeText.textContent = 'Normal';
+        }
+    }
+
+    // Function to find segment by timestamp
+    function findSegmentByTimestamp(timestamp) {
+        if (segments.length === 0) return -1;
+
+        // Find the closest segment to the given timestamp
+        let closestSegment = 0;
+        let minDistance = Number.MAX_VALUE;
+
+        segments.forEach((segment, index) => {
+            const distance = Math.abs(segment.start - timestamp);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestSegment = index;
+            }
+        });
+
+        return closestSegment;
+    }
+
+    // Function to jump to a specific timestamp in the transcript
+    function jumpToTimestamp(timestamp) {
+        // Convert timestamp to seconds if it's in format MM:SS or HH:MM:SS
+        let seconds = 0;
+        if (typeof timestamp === 'string' && timestamp.includes(':')) {
+            const parts = timestamp.split(':');
+            if (parts.length === 3) { // HH:MM:SS
+                seconds = parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseFloat(parts[2]);
+            } else if (parts.length === 2) { // MM:SS
+                seconds = parseInt(parts[0]) * 60 + parseFloat(parts[1]);
+            }
+        } else {
+            seconds = parseFloat(timestamp);
+        }
+
+        // Find the segment closest to this timestamp
+        const segmentIndex = findSegmentByTimestamp(seconds);
+
+        // Jump to the segment
+        if (segmentIndex >= 0) {
+            // Switch to transcript tab first if needed
+            const transcriptTab = document.querySelector('#tab-summary');
+            if (transcriptTab && transcriptTab.classList.contains('text-primary-300')) {
+                // We're already on a good tab, no need to switch
+            } else {
+                // Switch to summary tab first to ensure the UI is in a good state
+                switchTab('summary');
+            }
+
+            // Wait a bit then jump to segment
             setTimeout(() => {
-                toast.classList.remove('translate-y-0', 'opacity-100');
-                toast.classList.add('translate-y-10', 'opacity-0');
-            }, 3000);
+                jumpToSegment(segmentIndex);
+                // Highlight the segment briefly
+                const segment = document.getElementById('segment-' + segmentIndex);
+                if (segment) {
+                    segment.classList.add('bg-blue-100');
+                    setTimeout(() => {
+                        segment.classList.remove('bg-blue-100');
+                    }, 2000);
+                }
+            }, 100);
         }
-        
-        // Function to copy segment text
-        function copySegmentText(index) {
-            if (segments.length === 0 || index < 0 || index >= segments.length) return;
-            
-            const text = segments[index].text;
-            navigator.clipboard.writeText(text)
-                .then(() => {
-                    showNotification('Segment text copied to clipboard');
-                })
-                .catch(err => {
-                    console.error('Could not copy text: ', err);
-                    showNotification('Failed to copy text', true);
-                });
-        }
-        
-        // Function to toggle between normal and condensed views
-        function toggleTranscriptView() {
-            const transcriptContent = document.getElementById('transcript-content');
-            const segments = document.querySelectorAll('.segment');
-            const viewModeButton = document.getElementById('view-mode-toggle');
-            const viewModeText = document.getElementById('view-mode-text');
-            
-            if (!transcriptContent || !viewModeText) return;
-            
-            // Check current mode
-            const isCondensed = transcriptContent.classList.contains('condensed-view');
-            
-            if (isCondensed) {
-                // Switch to normal view
-                transcriptContent.classList.remove('condensed-view');
-                segments.forEach(segment => {
-                    segment.classList.remove('condensed');
-                    segment.classList.remove('py-1', 'px-2', 'mb-1');
-                    segment.classList.add('mb-3', 'p-3');
-                });
-                viewModeText.textContent = 'Condensed';
+    }
+
+    // Function to copy text to clipboard
+    function copyText(text) {
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text)
+                    .then(() => {
+                        showNotification('Text copied to clipboard');
+                    })
+                    .catch(err => {
+                        console.error('Could not copy text using API:', err);
+                        fallbackCopy(text);
+                    });
             } else {
-                // Switch to condensed view
-                transcriptContent.classList.add('condensed-view');
-                segments.forEach(segment => {
-                    segment.classList.add('condensed');
-                    segment.classList.remove('mb-3', 'p-3');
-                    segment.classList.add('py-1', 'px-2', 'mb-1');
-                });
-                viewModeText.textContent = 'Normal';
+                fallbackCopy(text);
             }
+        } catch (err) {
+            console.error('Error in copyText:', err);
+            showNotification('Failed to copy text', true);
         }
+    }
 
-        // Function to find segment by timestamp
-        function findSegmentByTimestamp(timestamp) {
-            if (segments.length === 0) return -1;
+    // Fallback copy method using textarea
+    function fallbackCopy(text) {
+        try {
+            // Create textarea element
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
             
-            // Find the closest segment to the given timestamp
-            let closestSegment = 0;
-            let minDistance = Number.MAX_VALUE;
+            // Make the textarea out of viewport
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
             
-            segments.forEach((segment, index) => {
-                const distance = Math.abs(segment.start - timestamp);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    closestSegment = index;
-                }
-            });
+            // Focus and select the text
+            textArea.focus();
+            textArea.select();
             
-            return closestSegment;
-        }
-        
-        // Function to copy image URL to clipboard
-        function copyImage(path) {
-            // Get the full URL
-            const fullUrl = window.location.origin + path;
-            navigator.clipboard.writeText(fullUrl)
-                .then(() => {
-                    showNotification('Screenshot URL copied to clipboard');
-                })
-                .catch(err => {
-                    console.error('Could not copy text: ', err);
-                    showNotification('Failed to copy URL', true);
-                });
-        }
-
-        // Function to jump to a specific timestamp in the transcript
-        function jumpToTimestamp(timestamp) {
-            // Convert timestamp to seconds if it's in format MM:SS or HH:MM:SS
-            let seconds = 0;
-            if (typeof timestamp === 'string' && timestamp.includes(':')) {
-                const parts = timestamp.split(':');
-                if (parts.length === 3) { // HH:MM:SS
-                    seconds = parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseFloat(parts[2]);
-                } else if (parts.length === 2) { // MM:SS
-                    seconds = parseInt(parts[0]) * 60 + parseFloat(parts[1]);
-                }
+            // Execute copy command
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            if (successful) {
+                showNotification('Text copied to clipboard (fallback method)');
             } else {
-                seconds = parseFloat(timestamp);
+                showNotification('Copy failed. Please copy manually.', true);
             }
-            
-            // Find the segment closest to this timestamp
-            const segmentIndex = findSegmentByTimestamp(seconds);
-            
-            // Jump to the segment
-            if (segmentIndex >= 0) {
-                // Switch to transcript tab first if needed
-                const transcriptTab = document.querySelector('#tab-summary');
-                if (transcriptTab && transcriptTab.classList.contains('text-primary-300')) {
-                    // We're already on a good tab, no need to switch
-                } else {
-                    // Switch to summary tab first to ensure the UI is in a good state
-                    switchTab('summary');
-                }
-                
-                // Wait a bit then jump to segment
-                setTimeout(() => {
-                    jumpToSegment(segmentIndex);
-                    // Highlight the segment briefly
-                    const segment = document.getElementById('segment-' + segmentIndex);
-                    if (segment) {
-                        segment.classList.add('bg-blue-100');
-                        setTimeout(() => {
-                            segment.classList.remove('bg-blue-100');
-                        }, 2000);
-                    }
-                }, 100);
+        } catch (err) {
+            console.error('Fallback copy failed:', err);
+            showNotification('Copy failed. Please try again or copy manually.', true);
+        }
+    }
+
+    // Function to download an image
+    function downloadImage(url, filename) {
+        // Create a temporary link
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename || 'screenshot.jpg';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        showNotification('Image download started');
+    }
+
+    // IMPROVED DOCUMENTATION GENERATION AND COPY FUNCTIONS
+    
+    // Generate documentation from key moments
+    function generateDocumentation() {
+        const format = document.getElementById('doc-format-select')?.value || 'markdown';
+        const transcriptTitle = "{{ transcript.title }}";
+        const moments = Array.from(document.querySelectorAll('#panel-key-moments .key-moment-card'));
+
+        if (moments.length === 0) {
+            return "No key moments found to document.";
+        }
+
+        let docContent = "";
+
+        // Start with title/header
+        if (format === 'confluence') {
+            docContent += `h1. ${transcriptTitle} - Key Moments\n\n`;
+        } else if (format === 'markdown') {
+            docContent += `# ${transcriptTitle} - Key Moments\n\n`;
+        } else {
+            docContent += `${transcriptTitle} - KEY MOMENTS\n${'='.repeat(transcriptTitle.length + 14)}\n\n`;
+        }
+
+        // Add each moment
+        moments.forEach((moment, index) => {
+            // Extract details from the moment card
+            const title = moment.querySelector('h4')?.textContent.trim() || `Moment ${index + 1}`;
+            const timestamp = moment.querySelector('.rounded-full')?.textContent.trim() || "";
+            const description = moment.querySelector('p.text-gray-700')?.textContent.trim() || "";
+            const transcript = moment.querySelector('.bg-gray-50.p-3.text-xs')?.textContent.trim() || "";
+
+            // Get screenshot URL if available
+            let screenshotUrl = "";
+            const img = moment.querySelector('img');
+            if (img && img.src) {
+                screenshotUrl = img.src;
             }
-        }
 
-        // Function to copy text to clipboard
-        function copyText(text) {
-            navigator.clipboard.writeText(text)
-                .then(() => {
-                    showNotification('Text copied to clipboard');
-                })
-                .catch(err => {
-                    console.error('Could not copy text: ', err);
-                    showNotification('Failed to copy text', true);
-                });
-        }
-
-        // Function to download an image
-        function downloadImage(url, filename) {
-            // Create a temporary link
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename || 'screenshot.jpg';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
-
-        // Function to copy image URL to clipboard
-        function copyImageUrl(url) {
-            // Make sure it's an absolute URL
-            const fullUrl = url.startsWith('http') ? url : window.location.origin + url;
-            
-            navigator.clipboard.writeText(fullUrl)
-                .then(() => {
-                    showNotification('Image URL copied to clipboard');
-                })
-                .catch(err => {
-                    console.error('Could not copy URL: ', err);
-                    showNotification('Failed to copy URL', true);
-                });
-        }
-
-        // Generate documentation from key moments
-        function generateDocumentation() {
-            const format = document.getElementById('doc-format-select')?.value || 'markdown';
-            const transcriptTitle = "{{ transcript.title }}";
-            const moments = Array.from(document.querySelectorAll('#panel-key-moments .rounded-lg.border'));
-            
-            if (moments.length === 0) {
-                return "No key moments found to document.";
-            }
-            
-            let docContent = "";
-            
-            // Start with title/header
+            // Format based on selected output format
             if (format === 'confluence') {
-                docContent += `h1. ${transcriptTitle} - Key Moments\n\n`;
-            } else if (format === 'markdown') {
-                docContent += `# ${transcriptTitle} - Key Moments\n\n`;
-            } else {
-                docContent += `${transcriptTitle} - KEY MOMENTS\n${'='.repeat(transcriptTitle.length + 14)}\n\n`;
-            }
-            
-            // Add each moment
-            moments.forEach((moment, index) => {
-                // Extract details from the moment card
-                const title = moment.querySelector('h4')?.textContent || `Moment ${index + 1}`;
-                const timestamp = moment.querySelector('.rounded-full')?.textContent.trim() || "";
-                const description = moment.querySelector('p.text-gray-600')?.textContent || "";
-                const transcript = moment.querySelector('.text-xs.text-gray-600.bg-gray-50')?.textContent || "";
-                
-                // Get screenshot URL if available
-                let screenshotUrl = "";
-                const img = moment.querySelector('img');
-                if (img && img.src) {
-                    screenshotUrl = img.src;
-                }
-                
-                // Format based on selected output format
-                if (format === 'confluence') {
-                    docContent += `h2. ${title} (${timestamp})\n\n`;
-                    docContent += `${description}\n\n`;
-                    
-                    if (screenshotUrl) {
-                        // Confluence uses ! for images
-                        docContent += `!${screenshotUrl}|width=500!\n\n`;
-                    }
-                    
-                    docContent += `{quote}\n${transcript}\n{quote}\n\n`;
-                    docContent += `----\n\n`;
-                } 
-                else if (format === 'markdown') {
-                    docContent += `## ${title} (${timestamp})\n\n`;
-                    docContent += `${description}\n\n`;
-                    
-                    if (screenshotUrl) {
-                        docContent += `![Screenshot at ${timestamp}](${screenshotUrl})\n\n`;
-                    }
-                    
-                    docContent += `> ${transcript}\n\n`;
-                    docContent += `---\n\n`;
-                }
-                else { // Plain text
-                    docContent += `${title} (${timestamp})\n${'~'.repeat(title.length + timestamp.length + 3)}\n\n`;
-                    docContent += `${description}\n\n`;
-                    
-                    if (screenshotUrl) {
-                        docContent += `[Screenshot URL: ${screenshotUrl}]\n\n`;
-                    }
-                    
-                    docContent += `"${transcript}"\n\n`;
-                    docContent += `----------\n\n`;
-                }
-            });
-            
-            return docContent;
-        }
+                docContent += `h2. ${title} (${timestamp})\n\n`;
+                docContent += `${description}\n\n`;
 
-        // Copy documentation to clipboard and show preview
-        function copyDocumentation() {
+                if (screenshotUrl) {
+                    // Use actual URL for Confluence image
+                    const fullUrl = screenshotUrl.startsWith('http') ? screenshotUrl : window.location.origin + screenshotUrl;
+                    docContent += `!${fullUrl}|width=500!\n\n`;
+                }
+
+                docContent += `{quote}\n${transcript}\n{quote}\n\n`;
+                docContent += `----\n\n`;
+            }
+            else if (format === 'markdown') {
+                docContent += `## ${title} (${timestamp})\n\n`;
+                docContent += `${description}\n\n`;
+
+                if (screenshotUrl) {
+                    const fullUrl = screenshotUrl.startsWith('http') ? screenshotUrl : window.location.origin + screenshotUrl;
+                    docContent += `![Screenshot at ${timestamp}](${fullUrl})\n\n`;
+                }
+
+                docContent += `> ${transcript}\n\n`;
+                docContent += `---\n\n`;
+            }
+            else { // Plain text
+                docContent += `${title} (${timestamp})\n${'~'.repeat(title.length + timestamp.length + 3)}\n\n`;
+                docContent += `${description}\n\n`;
+
+                if (screenshotUrl) {
+                    docContent += `[Screenshot URL: ${screenshotUrl}]\n\n`;
+                }
+
+                docContent += `"${transcript}"\n\n`;
+                docContent += `----------\n\n`;
+            }
+        });
+
+        return docContent;
+    }
+
+    // Function to copy documentation to clipboard and show preview
+    function copyDocumentation() {
+        try {
             const docContent = generateDocumentation();
             
-            // Copy to clipboard
-            navigator.clipboard.writeText(docContent)
-                .then(() => {
-                    showNotification('Documentation copied to clipboard - Ready for Confluence!');
-                    
-                    // Show preview
-                    const previewBox = document.getElementById('documentation-preview');
-                    const previewContent = document.getElementById('doc-preview-content');
-                    
-                    if (previewBox && previewContent) {
-                        previewContent.textContent = docContent;
-                        previewBox.classList.remove('hidden');
-                    }
-                })
-                .catch(err => {
-                    console.error('Could not copy documentation: ', err);
-                    showNotification('Failed to copy documentation', true);
-                });
+            // Check if clipboard API is available
+            if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+                // Modern approach with clipboard API
+                navigator.clipboard.writeText(docContent)
+                    .then(() => {
+                        showNotification('Documentation copied to clipboard - Ready for Confluence!');
+                        
+                        // Show preview
+                        const previewBox = document.getElementById('documentation-preview');
+                        const previewContent = document.getElementById('doc-preview-content');
+                        
+                        if (previewBox && previewContent) {
+                            previewContent.textContent = docContent;
+                            previewBox.classList.remove('hidden');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Could not copy documentation using API:', err);
+                        fallbackCopy(docContent);
+                    });
+            } else {
+                // Fallback approach for browsers without clipboard API
+                fallbackCopy(docContent);
+            }
+        } catch (err) {
+            console.error('Error in copyDocumentation:', err);
+            showNotification('Failed to copy documentation', true);
+        }
+    }
+
+    // Generate Confluence-formatted content from key moments
+    function generateConfluenceContent() {
+        const includeTimestamps = document.getElementById('include-timestamps').checked;
+        const includeDescriptions = document.getElementById('include-descriptions').checked;
+        const includeTranscript = document.getElementById('include-transcript').checked;
+
+        if (!keyMoments || keyMoments.length === 0) {
+            return "No key moments available for documentation.";
         }
 
-        // Toggle documentation preview visibility
-        function toggleDocPreview() {
-            const previewBox = document.getElementById('documentation-preview');
-            if (previewBox) {
-                previewBox.classList.toggle('hidden');
+        // Use single newlines for Confluence format
+        let content = "";
+
+        // Add header and title
+        content += `h1. ${document.title.split(' - ')[0]} - Key Moments\n\n`;
+
+        // Add each key moment
+        keyMoments.forEach((moment, index) => {
+            // Add section title with timestamp
+            content += `h2. ${moment.title || `Key Moment ${index + 1}`}`;
+
+            if (includeTimestamps && moment.timestamp) {
+                const formattedTime = typeof moment.timestamp === 'number'
+                    ? formatTime(moment.timestamp)
+                    : moment.timestamp;
+                content += ` (${formattedTime})`;
             }
+
+            content += '\n\n';
+
+            // Add description if available and requested
+            if (includeDescriptions && moment.description) {
+                content += `${moment.description}\n\n`;
+            }
+
+            // Add actual URL for the image if available
+            if (moment.screenshot_path) {
+                // Build full URL to the image
+                const baseUrl = window.location.origin;
+                const imagePath = moment.screenshot_path.startsWith('/') 
+                    ? moment.screenshot_path 
+                    : '/' + moment.screenshot_path;
+                content += `!${baseUrl}${imagePath}|width=500!\n\n`;
+            } else {
+                // No screenshot path, add placeholder
+                content += `!Insert screenshot for ${moment.title || `Key Moment ${index + 1}`} here!\n\n`;
+            }
+
+            // Add transcript text if requested
+            if (includeTranscript && moment.transcript_text) {
+                content += `{quote}\n${moment.transcript_text.trim()}\n{quote}\n\n`;
+            }
+
+            // Add separator between moments
+            if (index < keyMoments.length - 1) {
+                content += `----\n\n`;
+            }
+        });
+
+        return content;
+    }
+
+    // Generate and copy Confluence formatted content
+    function generateAndCopyConfluenceFormat() {
+        try {
+            const content = generateConfluenceContent();
+            
+            // Check if clipboard API is available
+            if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(content)
+                    .then(() => {
+                        showNotification('Content copied in Confluence format! Ready to paste.');
+                        
+                        // Highlight the copy button to indicate success
+                        const copyBtn = document.getElementById('copy-confluence');
+                        if (copyBtn) {
+                            copyBtn.classList.add('bg-green-600');
+                            copyBtn.innerText = 'Copied!';
+                            
+                            setTimeout(() => {
+                                copyBtn.classList.remove('bg-green-600');
+                                copyBtn.innerText = 'Copy All for Confluence';
+                            }, 2000);
+                        }
+                        
+                        // Show preview
+                        const previewBox = document.getElementById('documentation-preview');
+                        const previewContent = document.getElementById('doc-preview-content');
+                        if (previewBox && previewContent) {
+                            previewContent.textContent = content;
+                            previewBox.classList.remove('hidden');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Could not copy content using API:', err);
+                        fallbackCopy(content);
+                    });
+            } else {
+                fallbackCopy(content);
+            }
+        } catch (err) {
+            console.error('Error in generateAndCopyConfluenceFormat:', err);
+            showNotification('Failed to copy Confluence content', true);
         }
-    </script>
+    }
+
+    // Toggle documentation preview visibility
+    function toggleDocPreview() {
+        const previewBox = document.getElementById('documentation-preview');
+        if (previewBox) {
+            previewBox.classList.toggle('hidden');
+        }
+    }
+</script>
 </body>
 </html>

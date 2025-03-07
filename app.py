@@ -46,6 +46,81 @@ def get_model():
         model = whisper.load_model(model_size)
     return model
 
+def segment_to_dict(segment):
+    """Convert a Whisper segment to a plain dictionary with safe values"""
+    try:
+        # Print detailed debug information about the segment
+        print(f"Converting segment: {segment}")
+        print(f"Segment type: {type(segment)}")
+        
+        # Try to directly convert to dict if it's a custom class
+        if hasattr(segment, '__dict__'):
+            print("Segment has __dict__ attribute, trying direct conversion")
+            segment_dict = vars(segment)
+            
+            # Make sure we have the required fields
+            if 'start' in segment_dict and 'end' in segment_dict and 'text' in segment_dict:
+                return {
+                    "start": float(segment_dict['start']),
+                    "end": float(segment_dict['end']),
+                    "text": str(segment_dict['text']),
+                    "id": segment_dict.get('id')
+                }
+        
+        # Try to access as object properties
+        start = 0.0
+        end = 0.0
+        text = ""
+        segment_id = None
+        
+        # Try properties first
+        if hasattr(segment, 'start'):
+            start = float(segment.start)
+        elif isinstance(segment, dict) and 'start' in segment:
+            start = float(segment['start'])
+            
+        if hasattr(segment, 'end'):
+            end = float(segment.end)
+        elif isinstance(segment, dict) and 'end' in segment:
+            end = float(segment['end'])
+        
+        if hasattr(segment, 'text'):
+            text = str(segment.text)
+        elif isinstance(segment, dict) and 'text' in segment:
+            text = str(segment['text'])
+            
+        if hasattr(segment, 'id'):
+            segment_id = segment.id
+        elif isinstance(segment, dict) and 'id' in segment:
+            segment_id = segment['id']
+            
+        # Ensure end time is greater than start time
+        if end <= start:
+            end = start + 1.0
+            
+        return {
+            "start": start,
+            "end": end,
+            "text": text,
+            "id": segment_id
+        }
+    except Exception as e:
+        print(f"Error converting segment to dict: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # Emergency fallback - create a minimal segment with available info
+        try:
+            # Try to extract any readable text
+            if hasattr(segment, '__str__'):
+                text = str(segment)
+            else:
+                text = "Error converting segment"
+                
+            return {"start": 0.0, "end": 1.0, "text": text}
+        except:
+            return {"start": 0.0, "end": 1.0, "text": "Error converting segment"}
+
 # Routes
 @app.route('/')
 def index():
@@ -1027,12 +1102,79 @@ def transcribe():
             logger.info(f"Transcribing video: {video_path}")
             model = get_model()
             result = model.transcribe(video_path)
+            print(f"Whisper result keys: {result.keys()}")
+            print(f"Segments length: {len(result.get('segments', []))}")    
             transcript_text = result['text']
             logger.info(f"Transcription complete: {len(transcript_text)} characters")
         except Exception as e:
             logger.error(f"Transcription failed: {str(e)}")
             traceback.print_exc()
             return jsonify({'error': f'Transcription failed: {str(e)}'}), 500
+        
+        # Add detailed debugging for segments
+        print(f"Segments type: {type(result.get('segments', []))}")
+        
+        # Debug the first segment if available
+        if result.get('segments') and len(result.get('segments', [])) > 0:
+            first_segment = result.get('segments')[0]
+            print(f"First segment type: {type(first_segment)}")
+            print(f"First segment attributes: {dir(first_segment)}")
+            print(f"First segment dict: {vars(first_segment) if hasattr(first_segment, '__dict__') else 'Not a class instance'}")
+        
+        # Process segments with improved error handling
+        converted_segments = []
+        try:
+            segments_list = result.get('segments', [])
+            print(f"Processing {len(segments_list)} segments")
+            
+            for idx, segment in enumerate(segments_list):
+                try:
+                    # Try both attribute access and dictionary-style access
+                    if hasattr(segment, 'start') or isinstance(segment, dict):
+                        converted_segment = segment_to_dict(segment)
+                        converted_segments.append(converted_segment)
+                        if idx == 0:
+                            print(f"First converted segment: {converted_segment}")
+                    else:
+                        # Check what we have - a string, a tuple, or something else?
+                        print(f"Segment {idx} has unexpected type: {type(segment)}")
+                        # Create a basic segment with fallback attributes
+                        start = idx * 5.0  # Estimate 5 seconds per segment
+                        end = (idx + 1) * 5.0
+                        text = str(segment) if segment else f"Segment {idx+1}"
+                        converted_segments.append({
+                            "start": start,
+                            "end": end,
+                            "text": text,
+                            "id": idx
+                        })
+                except Exception as seg_err:
+                    print(f"Error converting segment {idx}: {seg_err}")
+                    # Still add a placeholder for this segment
+                    converted_segments.append({
+                        "start": idx * 5.0,
+                        "end": (idx + 1) * 5.0,
+                        "text": f"Error processing segment {idx}",
+                        "id": idx
+                    })
+                    
+            print(f"Successfully converted {len(converted_segments)} segments to dictionaries")
+        except Exception as e:
+            print(f"Error during segment conversion: {e}")
+            traceback.print_exc()
+            # Instead of an empty list, let's create artificial segments from the transcript
+            print("Falling back to creating segments from transcript text")
+            converted_segments = []
+            lines = transcript_text.split('. ')
+            for i, line in enumerate(lines):
+                if line.strip():  # Skip empty lines
+                    segment = {
+                        "start": i * 5.0,  # Rough estimate: 5 seconds per sentence
+                        "end": (i + 1) * 5.0,
+                        "text": line.strip() + ('.' if not line.endswith('.') else '')
+                    }
+                    converted_segments.append(segment)
+            print(f"Created {len(converted_segments)} fallback segments from transcript text")
         
         # Step 2: LLM analysis (only if available)
         summary = ""
@@ -1098,13 +1240,20 @@ def transcribe():
                                 # Update key moments with screenshot paths
                                 for i, result in enumerate(screenshot_results):
                                     if i < len(key_moments):
-                                        # Convert the absolute path to a relative web path
-                                        static_dir = 'static'
-                                        if static_dir in result['screenshot_path']:
-                                            web_path = '/' + result['screenshot_path'].split(static_dir)[1]
-                                            web_path = '/' + static_dir + web_path
+                                        # Use the web_path directly from the result
+                                        if 'web_path' in result:
+                                            web_path = result['web_path']
+                                        # Fallback to screenshot_path if web_path not available
+                                        elif 'screenshot_path' in result:
+                                            # Convert the absolute path to a relative web path
+                                            static_dir = 'static'
+                                            screenshot_path = result['screenshot_path']
+                                            if static_dir in screenshot_path:
+                                                web_path = '/' + static_dir + '/' + screenshot_path.split(static_dir)[1]
+                                            else:
+                                                web_path = screenshot_path
                                         else:
-                                            web_path = result['screenshot_path']
+                                            continue
                                         
                                         key_moments[i]['screenshot_path'] = web_path
                                         logger.info(f"Screenshot for moment {i+1}: {web_path}")
@@ -1130,7 +1279,7 @@ def transcribe():
                 'date': datetime.now().isoformat(),
                 'filepath': video_path,
                 'transcript': transcript_text,
-                'segments': result['segments'] if 'segments' in result else [],
+                'segments': converted_segments,  # Use our robustly converted segments
                 'summary': summary,
                 'topics': topics,
                 'action_items': action_items,
@@ -1185,6 +1334,121 @@ def transcribe():
         logger.error(f"Unhandled exception in transcribe endpoint: {str(e)}")
         traceback.print_exc()
         return jsonify({'error': f'An unexpected error occurred: {str(e)}'}), 500
+
+@app.route('/super-simple/<transcript_id>')
+def super_simple_transcript(transcript_id):
+    try:
+        # Find the file
+        transcript_path = os.path.join(app.config['TRANSCRIPT_FOLDER'], f"{transcript_id}.json")
+        
+        # Check if file exists
+        if os.path.exists(transcript_path):
+            # Read the file
+            with open(transcript_path, 'r') as f:
+                data = json.load(f)
+            
+            # Get number of segments
+            segment_count = len(data.get('segments', []))
+            
+            # Return super simple debug info
+            return f"""
+            <html>
+                <body>
+                    <h1>Super Simple Debug</h1>
+                    <p>Transcript ID: {transcript_id}</p>
+                    <p>File exists: Yes</p>
+                    <p>Segment count: {segment_count}</p>
+                    <hr>
+                    <h2>First Segment (if available):</h2>
+                    <pre>{json.dumps(data['segments'][0] if segment_count > 0 else {}, indent=2)}</pre>
+                </body>
+            </html>
+            """
+        else:
+            # File not found
+            return f"""
+            <html>
+                <body>
+                    <h1>Super Simple Debug</h1>
+                    <p>Transcript ID: {transcript_id}</p>
+                    <p>File exists: No</p>
+                    <p>File path: {transcript_path}</p>
+                    <hr>
+                    <h2>List of available transcripts:</h2>
+                    <ul>
+                        {''.join(f'<li>{f[:-5]}</li>' for f in os.listdir(app.config['TRANSCRIPT_FOLDER']) if f.endswith('.json'))}
+                    </ul>
+                </body>
+            </html>
+            """
+    except Exception as e:
+        # Something else went wrong
+        return f"""
+        <html>
+            <body>
+                <h1>Error</h1>
+                <p>Error type: {type(e).__name__}</p>
+                <p>Error message: {str(e)}</p>
+            </body>
+        </html>
+        """
+@app.route('/repair-transcript/<transcript_id>')
+def repair_transcript(transcript_id):
+    try:
+        # Find the file
+        transcript_path = os.path.join(app.config['TRANSCRIPT_FOLDER'], f"{transcript_id}.json")
+        
+        if not os.path.exists(transcript_path):
+            return "Transcript file not found", 404
+            
+        # Read the file
+        with open(transcript_path, 'r') as f:
+            data = json.load(f)
+        
+        # Check if transcript text exists but segments are empty
+        if data.get('transcript') and not data.get('segments'):
+            # Create basic segments from the transcript text
+            # This is a simplified approach - real segments would have accurate timestamps
+            lines = data['transcript'].split('. ')
+            new_segments = []
+            
+            for i, line in enumerate(lines):
+                if line.strip():  # Skip empty lines
+                    segment = {
+                        "start": i * 5.0,  # Rough estimate: 5 seconds per sentence
+                        "end": (i + 1) * 5.0,
+                        "text": line.strip() + ('.' if not line.endswith('.') else '')
+                    }
+                    new_segments.append(segment)
+            
+            # Update the data
+            data['segments'] = new_segments
+            
+            # Save back to file
+            with open(transcript_path, 'w') as f:
+                json.dump(data, f, indent=2)
+                
+            return f"""
+            <html>
+                <body>
+                    <h1>Transcript Repaired!</h1>
+                    <p>Created {len(new_segments)} segments from transcript text.</p>
+                    <p><a href="/transcript/{transcript_id}">View Transcript</a></p>
+                </body>
+            </html>
+            """
+        else:
+            return f"""
+            <html>
+                <body>
+                    <h1>No Repair Needed</h1>
+                    <p>Transcript has {len(data.get('segments', []))} segments and {len(data.get('transcript', ''))} chars of text.</p>
+                    <p><a href="/transcript/{transcript_id}">View Transcript</a></p>
+                </body>
+            </html>
+            """
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 @app.route('/transcript/<transcript_id>')
 def view_transcript(transcript_id):
@@ -1268,199 +1532,16 @@ def download_transcript(transcript_id):
     
     download_path = os.path.join(app.config['TRANSCRIPT_FOLDER'], f"{transcript_id}_report.pdf")
     
-    # Create the PDF document with better styling
-    doc = SimpleDocTemplate(download_path, pagesize=letter)
-    styles = getSampleStyleSheet()
+    # Path to logo if you have one
+    logo_path = os.path.join(app.root_path, 'static', 'images', 'logo.png')
+    if not os.path.exists(logo_path):
+        logo_path = None
     
-    # Add custom styles
-    title_style = ParagraphStyle(
-        name='CustomTitle',
-        parent=styles['Title'],
-        fontSize=16,
-        textColor=colors.HexColor('#2C3E50'),
-        spaceAfter=12
-    )
+    # Import the enhanced report generator function
+    from modules.reporting.enhanced_report import generate_enhanced_report
     
-    heading2_style = ParagraphStyle(
-        name='CustomHeading2',
-        parent=styles['Heading2'],
-        fontSize=14,
-        textColor=colors.HexColor('#3498DB'),
-        spaceAfter=10
-    )
-    
-    normal_style = ParagraphStyle(
-        name='CustomNormal',
-        parent=styles['Normal'],
-        fontSize=10,
-        leading=14,
-        spaceAfter=6
-    )
-    
-    # Start building content
-    content = []
-
-    # Title and Date with better styling
-    content.append(Paragraph(f"Transcript Report: {transcript_data['title']}", title_style))
-    content.append(Paragraph(f"Date: {transcript_data['date'].split('T')[0]}", normal_style))
-    content.append(Spacer(1, 12))
-    
-    # Summary section
-    content.append(Paragraph("Summary", heading2_style))
-    summary = transcript_data.get('summary', "No summary available.")
-    content.append(Paragraph(summary.replace('\n', '<br/>'), normal_style))
-    content.append(Spacer(1, 12))
-
-    # Topics section
-    content.append(Paragraph("Topics", heading2_style))
-    topics = transcript_data.get('topics', [])
-    if topics:
-        for topic in topics:
-            content.append(Paragraph(topic.get('name', 'Unnamed Topic'), ParagraphStyle(
-                name='TopicHeading',
-                parent=styles['Heading3'],
-                textColor=colors.HexColor('#2980B9'),
-                fontSize=12
-            )))
-            for point in topic.get('points', []):
-                content.append(Paragraph(f"• {point}", normal_style))
-    else:
-        content.append(Paragraph("No topics identified.", normal_style))
-    content.append(Spacer(1, 12))
-
-    # Action Items with improved table
-    content.append(Paragraph("Action Items", heading2_style))
-    action_items = transcript_data.get('action_items', [])
-    if action_items and isinstance(action_items, list):
-        # Define table headers
-        action_data = [[
-            Paragraph("<b>Task</b>", normal_style),
-            Paragraph("<b>Assignee</b>", normal_style),
-            Paragraph("<b>Due</b>", normal_style),
-            Paragraph("<b>Priority</b>", normal_style)
-        ]]
-        
-        # Add wrapped action item rows
-        for item in action_items:
-            # Safely handle None values in all fields
-            task_text = item.get('task', 'Unnamed Task') if item.get('task') is not None else 'Unnamed Task'
-            assignee_text = item.get('assignee', 'Unassigned') if item.get('assignee') is not None else 'Unassigned'
-            due_text = item.get('due', 'Not specified') if item.get('due') is not None else 'Not specified'
-            
-            # Create paragraph objects with safe values
-            task = Paragraph(task_text, normal_style)
-            assignee = Paragraph(assignee_text, normal_style)
-            due = Paragraph(due_text, normal_style)
-            
-            # Handle priority safely
-            priority = item.get('priority', 'Medium') if item.get('priority') is not None else 'Medium'
-            priority_color = '#E74C3C' if priority.lower() == 'high' else '#F39C12' if priority.lower() == 'medium' else '#2ECC71'
-            priority_cell = Paragraph(f'<font color="{priority_color}">{priority}</font>', normal_style)
-            
-            action_data.append([task, assignee, due, priority_cell])
-        
-        # Create table with adjusted widths and improved styling
-        table = Table(action_data, colWidths=[200, 100, 100, 50])
-        table.setStyle(TableStyle([
-            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#BDC3C7')),
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3498DB')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 4),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#F8F9F9'), colors.HexColor('#EAECEE')]),
-        ]))
-        content.append(table)
-    else:
-        content.append(Paragraph("No action items identified.", normal_style))
-    content.append(Spacer(1, 12))
-    
-    # Questions & Answers Section (New)
-    qa_pairs = transcript_data.get('qa_pairs', [])
-    if qa_pairs:
-        content.append(Paragraph("Questions & Answers", heading2_style))
-        for qa in qa_pairs:
-            qa_text = f"""
-            <b>Q:</b> {qa.get('question', 'Unknown question')}<br/>
-            <i>Asked by:</i> {qa.get('asker', 'Unknown')}<br/>
-            <b>A:</b> {qa.get('answer', 'No answer provided')}<br/>
-            <i>Answered by:</i> {qa.get('answerer', 'Unknown')}
-            """
-            content.append(Paragraph(qa_text, ParagraphStyle(
-                name='QA',
-                parent=normal_style,
-                backColor=colors.HexColor('#EBF5FB'),
-                borderPadding=10,
-                borderWidth=1,
-                borderColor=colors.HexColor('#AED6F1'),
-                borderRadius=8,
-            )))
-            content.append(Spacer(1, 6))
-        content.append(Spacer(1, 12))
-    
-    # Key Decisions Section (New)
-    decisions = transcript_data.get('decisions', [])
-    if decisions:
-        content.append(Paragraph("Key Decisions", heading2_style))
-        for decision in decisions:
-            # Handle possible None values
-            decision_title = decision.get('decision', 'Unnamed Decision') if decision.get('decision') is not None else 'Unnamed Decision'
-            context = decision.get('context', 'No context provided') if decision.get('context') is not None else 'No context provided'
-            
-            # Safely handle stakeholders list
-            stakeholders = decision.get('stakeholders', ['Unknown'])
-            stakeholders_text = ', '.join(stakeholders) if stakeholders is not None else 'Unknown'
-            
-            decision_text = f"""
-            <b>{decision_title}</b><br/>
-            <i>Context:</i> {context}<br/>
-            <i>Stakeholders:</i> {stakeholders_text}<br/>
-            <i>Impact:</i> {decision.get('impact', 'Medium') if decision.get('impact') is not None else 'Medium'}<br/>
-            <i>Next Steps:</i> {decision.get('next_steps', 'None specified') if decision.get('next_steps') is not None else 'None specified'}
-            """
-            content.append(Paragraph(decision_text, normal_style))
-            content.append(Spacer(1, 6))
-        content.append(Spacer(1, 12))
-    
-    # Personal Commitments Section (New)
-    commitments = transcript_data.get('commitments', [])
-    if commitments:
-        content.append(Paragraph("Personal Commitments", heading2_style))
-        for commitment in commitments:
-            # Handle possible None values
-            person = commitment.get('person', 'Unknown') if commitment.get('person') is not None else 'Unknown'
-            commitment_desc = commitment.get('commitment', 'Unspecified') if commitment.get('commitment') is not None else 'Unspecified'
-            timeframe = commitment.get('timeframe', 'Not specified') if commitment.get('timeframe') is not None else 'Not specified'
-            confidence = commitment.get('confidence', 'Medium') if commitment.get('confidence') is not None else 'Medium'
-            
-            commitment_text = f"""
-            <b>{person}:</b> {commitment_desc}<br/>
-            <i>Timeframe:</i> {timeframe}<br/>
-            <i>Confidence:</i> {confidence}
-            """
-            content.append(Paragraph(commitment_text, normal_style))
-            content.append(Spacer(1, 6))
-        content.append(Spacer(1, 12))
-    
-    # Add a page break before the full transcript
-    content.append(PageBreak())
-    
-    # Full transcript with timestamps
-    content.append(Paragraph("Full Transcript", heading2_style))
-    transcript_text = ""
-    for segment in transcript_data['segments']:
-        minutes = int(segment['start'] // 60)
-        seconds = int(segment['start'] % 60)
-        time_str = f"{minutes:02d}:{seconds:02d}"
-        content.append(Paragraph(
-            f'<font color="#3498DB"><b>[{time_str}]</b></font> {segment["text"]}',
-            normal_style
-        ))
-    
-    # Build the document
-    doc.build(content)
+    # Generate the enhanced report
+    generate_enhanced_report(transcript_data, download_path, logo_path)
     
     return send_file(download_path, as_attachment=True, download_name=f"{transcript_data['title']}_report.pdf")
 
@@ -1491,7 +1572,33 @@ def save_topics(transcript_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-
+# Add this route to your app.py file
+@app.route('/debug/transcript/<transcript_id>')
+def debug_transcript(transcript_id):
+    transcript_path = os.path.join(app.config['TRANSCRIPT_FOLDER'], f"{transcript_id}.json")
+    
+    if not os.path.exists(transcript_path):
+        return render_template('404.html', message="Transcript not found"), 404
+    
+    try:
+        with open(transcript_path, 'r') as f:
+            transcript_data = json.load(f)
+        
+        # Verify segments structure
+        print(f"Debug route: Segments type: {type(transcript_data.get('segments'))}")
+        print(f"Debug route: Segments length: {len(transcript_data.get('segments', []))}")
+        
+        if transcript_data.get('segments'):
+            first_segment = transcript_data['segments'][0]
+            print(f"Debug route: First segment keys: {first_segment.keys()}")
+            print(f"Debug route: First segment: {first_segment}")
+        
+        return render_template('segment_debug.html', transcript=transcript_data)
+    except Exception as e:
+        print(f"Error in debug route: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return f"Error loading transcript: {str(e)}", 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5050)
