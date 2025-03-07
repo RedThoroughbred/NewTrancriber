@@ -117,6 +117,57 @@ def generate_enhanced_report(transcript_data, output_path, logo_path=None):
     
     elements.append(Spacer(1, 0.25*inch))
     
+    if transcript_data.get('key_moments') and len(transcript_data['key_moments']) > 0:
+        elements.append(Paragraph("Key Visual Moments", styles['Heading1']))
+        elements.append(Paragraph("Important moments from the meeting with visual context", styles['Normal']))
+        elements.append(Spacer(1, 0.15*inch))
+        
+        for i, moment in enumerate(transcript_data['key_moments']):
+            # Add moment title with timestamp
+            timestamp_str = format_timestamp(moment.get('timestamp', 0))
+            moment_title = f"{moment.get('title', 'Key Moment')} ({timestamp_str})"
+            elements.append(Paragraph(moment_title, styles['Heading3']))
+            
+            # Check if there's a screenshot
+            if 'screenshot_path' in moment and os.path.exists(moment['screenshot_path'].replace('/static/', app.static_folder + '/')):
+                try:
+                    # Add screenshot image
+                    screenshot_path = moment['screenshot_path'].replace('/static/', app.static_folder + '/')
+                    img = Image(screenshot_path, width=6*inch, height=4*inch, kind='proportional')
+                    elements.append(img)
+                    
+                    # Add caption
+                    caption = f"Screenshot at {timestamp_str}"
+                    elements.append(Paragraph(caption, styles['Caption']))
+                except Exception as e:
+                    print(f"Error adding image: {e}")
+                    # Add a placeholder if the image fails
+                    elements.append(Paragraph("[Screenshot could not be included]", styles['Caption']))
+            
+            # Add moment description
+            if 'description' in moment and moment['description']:
+                elements.append(Paragraph(moment['description'], styles['Normal']))
+                
+            # Add transcript text
+            if 'transcript_text' in moment and moment['transcript_text']:
+                # Create a styled text box
+                text_box = Table([[Paragraph(moment['transcript_text'], styles['Normal'])]], 
+                               colWidths=[7*inch], 
+                               rowHeights=None)
+                text_box.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#F5F5F5')),
+                    ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#E0E0E0')),
+                    ('PADDING', (0, 0), (-1, -1), 8),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 12),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+                ]))
+                elements.append(text_box)
+            
+            elements.append(Spacer(1, 0.35*inch))
+        
+        # Page break after key moments
+        elements.append(PageBreak())
+
     # Key Topics Section
     elements.append(Paragraph("Key Topics", styles['Heading1']))
     

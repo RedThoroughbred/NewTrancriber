@@ -8,6 +8,34 @@ import uuid
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
+# Import the LLM analysis functions from meeting_intelligence
+try:
+    from ..llm.meeting_intelligence import (
+        analyze_combined_transcripts,
+        safe_json_loads,
+        _truncate_text,
+        is_available as llm_is_available
+    )
+except ImportError:
+    # Fallback if imports fail
+    def analyze_combined_transcripts(*args, **kwargs): 
+        return {"comparative_summary": "LLM analysis not available."}
+    def safe_json_loads(json_str, default_value): return default_value
+    def _truncate_text(text, max_length=6000): return text[:max_length]
+    def llm_is_available(): return False
+
+# Try to import visualization module if available
+try:
+    from ..visualization.report_visualization import (
+        generate_html_report, 
+        save_html_report
+    )
+    visualization_available = True
+except ImportError:
+    visualization_available = False
+    def generate_html_report(*args, **kwargs): return ""
+    def save_html_report(*args, **kwargs): pass
+
 def load_transcript(transcript_id: str, transcripts_folder: str) -> Optional[Dict[str, Any]]:
     """
     Load a transcript from file.
@@ -34,7 +62,8 @@ def analyze_multiple_transcripts(
     transcript_ids: List[str],
     transcripts_folder: str,
     use_llm: bool = True,
-    analysis_id: str = None
+    analysis_id: str = None,
+    generate_visualizations: bool = True
 ) -> Dict[str, Any]:
     """
     Analyze multiple transcripts together to find patterns and insights.
@@ -44,6 +73,7 @@ def analyze_multiple_transcripts(
         transcripts_folder: Folder containing transcript files
         use_llm: Whether to use LLM for enhanced analysis
         analysis_id: Optional ID for the analysis, creates new one if not provided
+        generate_visualizations: Whether to generate visualizations
         
     Returns:
         A dictionary containing the analysis results
@@ -84,28 +114,86 @@ def analyze_multiple_transcripts(
         for t in transcripts
     ]
     
-    # Basic analysis without LLM
+    # Basic analysis without LLM (always run this as a fallback)
     common_topics = find_common_topics(transcripts)
     results['common_topics'] = common_topics
     results['evolving_topics'] = track_topic_evolution(transcripts)
     results['action_item_status'] = track_action_items(transcripts)
     
-    # Generate a meaningful comparative summary without LLM
-    print("Generating comparative summary...")
-    try:
-        summary = generate_basic_summary(transcripts, common_topics)
-        print(f"Summary generated: {len(summary)} characters")
-        if len(summary) < 100:
-            print(f"WARNING: Summary is very short: '{summary}'")
-        results['comparative_summary'] = summary
-    except Exception as e:
-        print(f"Error generating summary: {e}")
-        import traceback
-        traceback.print_exc()
-        results['comparative_summary'] = f"Error generating summary: {str(e)}"
+    # Try LLM analysis if enabled
+    llm_success = False
+    if use_llm and llm_is_available():
+        try:
+            print("Attempting LLM-enhanced analysis...")
+            # Prepare combined text with separators
+            combined_text = ""
+            for i, transcript in enumerate(transcripts):
+                title = transcript.get('title', f'Transcript {i+1}')
+                date = transcript.get('date', '').split('T')[0] if transcript.get('date') else 'Undated'
+                combined_text += f"\n\n--- TRANSCRIPT {i+1}: {title} ({date}) ---\n\n"
+                combined_text += transcript.get('transcript', '')
+            
+            # Get LLM-enhanced analysis
+            llm_results = analyze_combined_transcripts(combined_text, results['transcripts_metadata'])
+            
+            # Merge results, preferring LLM results when available
+            if llm_results.get('comparative_summary'):
+                results['comparative_summary'] = llm_results['comparative_summary']
+                llm_success = True
+            
+            if llm_results.get('common_topics'):
+                # If LLM found topics but basic analysis also found topics,
+                # merge them, preferring LLM topics but keeping unique basic topics
+                llm_topic_names = {t['name'].lower() for t in llm_results['common_topics']}
+                for basic_topic in results['common_topics']:
+                    if basic_topic['name'].lower() not in llm_topic_names:
+                        llm_results['common_topics'].append(basic_topic)
+                results['common_topics'] = llm_results['common_topics']
+            
+            if llm_results.get('evolving_topics'):
+                results['evolving_topics'] = llm_results['evolving_topics']
+            
+            if llm_results.get('conflicting_information'):
+                results['conflicting_information'] = llm_results['conflicting_information']
+            
+            if llm_results.get('action_item_status'):
+                results['action_item_status'] = llm_results['action_item_status']
+                
+            print("LLM analysis successful")
+            
+        except Exception as e:
+            print(f"LLM analysis failed, using basic analysis: {e}")
+            import traceback
+            traceback.print_exc()
+            # We already have basic results as fallback
     
-    # We'll skip the LLM analysis for now since it's not working well
-    # This can be re-enabled later when the LLM integration is more robust
+    # Generate a meaningful comparative summary without LLM if needed
+    if not results['comparative_summary']:
+        print("Generating basic comparative summary...")
+        try:
+            summary = generate_basic_summary(transcripts, common_topics)
+            print(f"Summary generated: {len(summary)} characters")
+            if len(summary) < 100:
+                print(f"WARNING: Summary is very short: '{summary}'")
+            results['comparative_summary'] = summary
+        except Exception as e:
+            print(f"Error generating summary: {e}")
+            import traceback
+            traceback.print_exc()
+            results['comparative_summary'] = f"Error generating summary: {str(e)}"
+    
+    # Generate visualizations and HTML report if requested
+    if generate_visualizations and visualization_available:
+        try:
+            # Generate and save HTML report in the same folder
+            report_path = os.path.join(transcripts_folder, f"report_{analysis_id}.html")
+            save_html_report(results, report_path)
+            results['html_report_path'] = report_path
+            print(f"Generated HTML report at {report_path}")
+        except Exception as e:
+            print(f"Error generating visualizations: {e}")
+            import traceback
+            traceback.print_exc()
     
     # Store the results
     results_path = os.path.join(transcripts_folder, f"comparison_{analysis_id}.json")
@@ -149,41 +237,62 @@ def generate_basic_summary(transcripts: List[Dict[str, Any]], common_topics: Lis
     end_date = sorted_transcripts[-1].get('date', '').split('T')[0] if sorted_transcripts[-1].get('date') else 'unknown date'
     
     # Start building the summary
-    summary = f"## Comparative Analysis of {len(transcripts)} Transcripts\n\n"
-    summary += f"This analysis compares transcripts from {start_date} to {end_date}.\n\n"
+    summary = f"## Executive Summary: Meeting Series Analysis\n\n"
+    
+    # Add a concise executive summary first
+    summary += "### Key Insights\n\n"
+    if common_topics:
+        topic_names = [topic.get('name', '') for topic in common_topics[:3]]
+        summary += f"Over the course of {len(transcripts)} meetings from {start_date} to {end_date}, "
+        summary += f"discussions primarily focused on {', '.join(topic_names)}. "
+        
+        # Count action items
+        total_action_items = 0
+        for transcript in transcripts:
+            if 'action_items' in transcript and isinstance(transcript['action_items'], list):
+                total_action_items += len(transcript['action_items'])
+        
+        if total_action_items > 0:
+            summary += f"These meetings generated {total_action_items} action items. "
+    else:
+        summary += f"This analysis covers {len(transcripts)} meetings from {start_date} to {end_date}. "
+        summary += "No consistent topics were identified across these meetings. "
+    
+    summary += "\n\n"
     
     # Add information about the transcripts
-    summary += "### Analyzed Transcripts\n\n"
+    summary += "### Analyzed Meetings\n\n"
     for i, t in enumerate(sorted_transcripts):
         title = t.get('title', 'Untitled')
         date = t.get('date', '').split('T')[0] if t.get('date') else 'unknown date'
         topic = t.get('topic', 'No topic specified')
-        summary += f"- **Transcript {i+1}**: {title} ({date}) - {topic}\n"
+        word_count = len(t.get('transcript', '').split())
+        summary += f"- **Meeting {i+1}**: {title} ({date}) - {topic} - {word_count} words\n"
     
     summary += "\n"
     
     # Add information about common topics
     if common_topics:
-        summary += "### Key Common Topics\n\n"
-        summary += "The following topics appear across multiple transcripts:\n\n"
+        summary += "### Key Topics\n\n"
+        summary += "The following topics appear across multiple meetings:\n\n"
         
         for i, topic in enumerate(common_topics[:5]):  # Show top 5 topics
             topic_name = topic.get('name', 'Unknown')
             topic_freq = topic.get('frequency', 0)
-            summary += f"- **{topic_name}**: Appears in {topic_freq} transcripts\n"
+            summary += f"- **{topic_name}**: Appears in {topic_freq} meetings\n"
             
             # Add details for each occurrence
             for occurrence in topic.get('transcripts', [])[:3]:  # Show up to 3 occurrences
                 transcript_title = occurrence.get('title', 'Untitled')
                 transcript_date = occurrence.get('date', 'unknown date')
-                summary += f"  - Found in \"{transcript_title}\" ({transcript_date})\n"
+                summary += f"  - Discussed in \"{transcript_title}\" ({transcript_date})\n"
         
         if len(common_topics) > 5:
             summary += f"\nPlus {len(common_topics) - 5} more common topics.\n"
         
         summary += "\n"
     else:
-        summary += "### Topics\n\nNo common topics were identified across these transcripts.\n\n"
+        summary += "### Topics\n\nNo common topics were identified across these meetings.\n\n"
     
     # Find overlapping participants if available
     all_participants = {}
@@ -209,15 +318,53 @@ def generate_basic_summary(transcripts: List[Dict[str, Any]], common_topics: Lis
         }
         
         if common_participants:
-            summary += "### Common Participants\n\n"
-            summary += "These people participated in multiple transcripts:\n\n"
+            summary += "### Key Contributors\n\n"
+            summary += "These people participated in multiple meetings:\n\n"
             
             for speaker, transcript_ids in common_participants.items():
-                summary += f"- **{speaker}**: Participated in {len(transcript_ids)} transcripts\n"
+                summary += f"- **{speaker}**: Participated in {len(transcript_ids)} meetings\n"
                 
             summary += "\n"
     
-    # Add text similarity analysis
+    # Add meeting efficiency metrics
+    summary += "### Meeting Efficiency\n\n"
+    
+    # Calculate total meeting time if available
+    total_duration = 0
+    meetings_with_duration = 0
+    for t in transcripts:
+        if 'duration_seconds' in t:
+            total_duration += t.get('duration_seconds', 0)
+            meetings_with_duration += 1
+    
+    if total_duration > 0:
+        hours = total_duration // 3600
+        minutes = (total_duration % 3600) // 60
+        summary += f"- Total meeting time: {hours}h {minutes}m\n"
+        if meetings_with_duration == len(transcripts):
+            summary += f"- Average meeting length: {total_duration / len(transcripts) / 60:.1f} minutes\n"
+    
+    # Count words across all transcripts
+    total_words = sum(len(t.get('transcript', '').split()) for t in transcripts)
+    summary += f"- Total transcript length: {total_words} words\n"
+    summary += f"- Average transcript length: {total_words // len(transcripts)} words per meeting\n"
+    
+    # Add action item stats
+    total_action_items = 0
+    completed_items = 0
+    for t in transcripts:
+        if 'action_items' in t and isinstance(t['action_items'], list):
+            total_action_items += len(t['action_items'])
+            completed_items += len([a for a in t['action_items'] if a.get('status') == 'completed'])
+    
+    if total_action_items > 0:
+        completion_rate = (completed_items / total_action_items) * 100
+        summary += f"- Action item completion rate: {completion_rate:.1f}%\n"
+        summary += f"- Total action items: {total_action_items}\n"
+    
+    summary += "\n"
+    
+    # Add content comparison
     summary += "### Content Comparison\n\n"
     
     if len(transcripts) == 2:
@@ -275,16 +422,30 @@ def generate_basic_summary(transcripts: List[Dict[str, Any]], common_topics: Lis
     summary += "\n"
     
     # Add conclusion
-    summary += "### Summary\n\n"
-    if common_topics:
-        topic_names = [topic.get('name', '') for topic in common_topics[:3]]
-        summary += f"These transcripts primarily discuss {', '.join(topic_names)}. "
+    summary += "### Next Steps\n\n"
     
-    if len(transcripts) > 2:
-        summary += f"The analysis covers {len(transcripts)} transcripts spanning " + \
-                  f"from {start_date} to {end_date}."
+    # Extract action items that are still pending
+    pending_items = []
+    for transcript in transcripts:
+        if 'action_items' in transcript and isinstance(transcript['action_items'], list):
+            for item in transcript['action_items']:
+                if item.get('status', 'pending') != 'completed':
+                    pending_items.append({
+                        'description': item.get('description', ''),
+                        'assignee': item.get('assignee', 'Unassigned'),
+                        'transcript': transcript.get('title', 'Untitled'),
+                        'date': transcript.get('date', '').split('T')[0] if transcript.get('date') else 'Unknown'
+                    })
+    
+    if pending_items:
+        summary += "Outstanding action items from these meetings:\n\n"
+        for i, item in enumerate(pending_items[:5]):  # Show top 5 pending items
+            summary += f"- {item['description']} (Assigned to: {item['assignee']}, From: {item['transcript']})\n"
+        
+        if len(pending_items) > 5:
+            summary += f"\nPlus {len(pending_items) - 5} more pending action items.\n"
     else:
-        summary += f"The comparison reveals both similarities and differences between these two transcripts."
+        summary += "No pending action items identified from these meetings.\n"
     
     return summary
 

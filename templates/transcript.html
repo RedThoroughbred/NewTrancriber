@@ -112,7 +112,6 @@
             </nav>
         </header>
         <main class="max-w-7xl mx-auto">
-        </main>
             <section>
                 <!-- File info and actions bar -->
                 <div class="bg-white rounded-xl p-5 mb-6 transition-all shadow-sm border border-gray-200">
@@ -128,7 +127,11 @@
                                 <p class="text-gray-500 text-sm flex items-center">
                                     <span class="mr-3">{{ transcript.original_filename }}</span>
                                     <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-600">
-                                        {{ (transcript.segments[-1].end / 60)|int }}:{{ '%02d' % ((transcript.segments[-1].end % 60)|int) }}
+                                        {% if transcript.segments and transcript.segments|length > 0 %}
+                                            {{ (transcript.segments[-1].end / 60)|int }}:{{ '%02d' % ((transcript.segments[-1].end % 60)|int) }}
+                                        {% else %}
+                                            0:00
+                                        {% endif %}
                                     </span>
                                 </p>
                             </div>
@@ -186,7 +189,13 @@
                                             </select>
                                             <div class="text-sm text-gray-700">
                                                 <span id="current-time" class="tabular-nums">0:00</span> / 
-                                                <span id="total-time" class="tabular-nums">{{ (transcript.segments[-1].end / 60)|int }}:{{ '%02d' % ((transcript.segments[-1].end % 60)|int) }}</span>
+                                                <span id="total-time" class="tabular-nums">
+                                                    {% if transcript.segments and transcript.segments|length > 0 %}
+                                                        {{ (transcript.segments[-1].end / 60)|int }}:{{ '%02d' % ((transcript.segments[-1].end % 60)|int) }}
+                                                    {% else %}
+                                                        0:00
+                                                    {% endif %}
+                                                </span>
                                             </div>
                                         </div>
                                         <h3 class="text-lg font-medium text-blue-600 hidden md:block">Timeline</h3>
@@ -198,24 +207,26 @@
                                             </button>
                                         </div>
                                     </div>
-                            
+
                                     <!-- Enhanced timeline -->
                                     <div class="relative">
                                         <div class="relative h-8 bg-white rounded-xl overflow-hidden border border-gray-300" id="timeline-container">
                                             <div class="absolute top-0 left-0 h-full bg-blue-200" id="timeline-progress" style="width: 0%;"></div>
                                             
                                             <!-- Timeline markers for segments -->
-                                            {% for segment in transcript.segments %}
-                                            <div 
-                                                class="timeline-segment absolute top-0 h-full hover:bg-opacity-50 transition duration-150" 
-                                                style="left: {{ (segment.start / transcript.segments[-1].end * 100)|float }}%; width: {{ ((segment.end - segment.start) / transcript.segments[-1].end * 100)|float }}%;"
-                                                data-start="{{ segment.start }}"
-                                                data-end="{{ segment.end }}"
-                                                data-index="{{ loop.index0 }}"
-                                                onclick="jumpToSegment({{ loop.index0 }})"
-                                                title="{{ '%02d:%02d' % ((segment.start / 60)|int, (segment.start % 60)|int) }} - {{ '%02d:%02d' % ((segment.end / 60)|int, (segment.end % 60)|int) }}"
-                                            ></div>
-                                            {% endfor %}
+                                            {% if transcript.segments and transcript.segments|length > 0 %}
+                                                {% for segment in transcript.segments %}
+                                                <div 
+                                                    class="timeline-segment absolute top-0 h-full hover:bg-opacity-50 transition duration-150" 
+                                                    style="left: {{ (segment.start / transcript.segments[-1].end * 100)|float }}%; width: {{ ((segment.end - segment.start) / transcript.segments[-1].end * 100)|float }}%;"
+                                                    data-start="{{ segment.start }}"
+                                                    data-end="{{ segment.end }}"
+                                                    data-index="{{ loop.index0 }}"
+                                                    onclick="jumpToSegment({{ loop.index0 }})"
+                                                    title="{{ '%02d:%02d' % ((segment.start / 60)|int, (segment.start % 60)|int) }} - {{ '%02d:%02d' % ((segment.end / 60)|int, (segment.end % 60)|int) }}"
+                                                ></div>
+                                                {% endfor %}
+                                            {% endif %}
                                             
                                             <!-- Playhead -->
                                             <div class="absolute top-0 h-full w-0.5 bg-blue-600 pointer-events-none hidden" id="playhead" style="left: 0%;">
@@ -224,13 +235,24 @@
                                         </div>
                                         
                                         <!-- Time markers -->
-                                        <div class="flex justify-between text-xs text-gray-600 mt-1 px-2">
-                                            <span>0:00</span>
-                                            <span>{{ (transcript.segments[-1].end / 60 / 4)|int }}:{{ '%02d' % ((transcript.segments[-1].end / 4 % 60)|int) }}</span>
-                                            <span>{{ (transcript.segments[-1].end / 60 / 2)|int }}:{{ '%02d' % ((transcript.segments[-1].end / 2 % 60)|int) }}</span>
-                                            <span>{{ (transcript.segments[-1].end / 60 * 3/4)|int }}:{{ '%02d' % ((transcript.segments[-1].end * 3/4 % 60)|int) }}</span>
-                                            <span>{{ (transcript.segments[-1].end / 60)|int }}:{{ '%02d' % ((transcript.segments[-1].end % 60)|int) }}</span>
-                                        </div>
+                                        {% if transcript.segments and transcript.segments|length > 0 %}
+                                            {% set total_duration = transcript.segments[-1].end %}
+                                            <div class="flex justify-between text-xs text-gray-600 mt-1 px-2">
+                                                <span>0:00</span>
+                                                <span>{{ (total_duration / 60 / 4)|int }}:{{ '%02d' % ((total_duration / 4 % 60)|int) }}</span>
+                                                <span>{{ (total_duration / 60 / 2)|int }}:{{ '%02d' % ((total_duration / 2 % 60)|int) }}</span>
+                                                <span>{{ (total_duration / 60 * 3/4)|int }}:{{ '%02d' % ((total_duration * 3/4 % 60)|int) }}</span>
+                                                <span>{{ (total_duration / 60)|int }}:{{ '%02d' % ((total_duration % 60)|int) }}</span>
+                                            </div>
+                                        {% else %}
+                                            <div class="flex justify-between text-xs text-gray-600 mt-1 px-2">
+                                                <span>0:00</span>
+                                                <span>0:00</span>
+                                                <span>0:00</span>
+                                                <span>0:00</span>
+                                                <span>0:00</span>
+                                            </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -270,29 +292,35 @@
                                 
                                 <!-- Transcript text with enhanced styling - fixed height scrollable container -->
                                 <div class="max-h-[calc(100vh-270px)] overflow-y-auto scrollbar-thin" id="transcript-content">
-                                    {% for segment in transcript.segments %}
-                                    <div 
-                                        class="mb-3 p-3 rounded-lg hover:bg-gray-100 transition-all segment group" 
-                                        id="segment-{{ loop.index0 }}" 
-                                        data-start="{{ segment.start }}" 
-                                        data-end="{{ segment.end }}"
-                                        onclick="jumpToSegment({{ loop.index0 }})"
-                                    >
-                                        <div class="flex justify-between items-center mb-1">
-                                            <div class="text-blue-600 text-xs font-medium tabular-nums">
-                                                {{ '%02d:%02d' % ((segment.start / 60)|int, (segment.start % 60)|int) }} - {{ '%02d:%02d' % ((segment.end / 60)|int, (segment.end % 60)|int) }}
+                                    {% if transcript.segments and transcript.segments|length > 0 %}
+                                        {% for segment in transcript.segments %}
+                                        <div 
+                                            class="mb-3 p-3 rounded-lg hover:bg-gray-100 transition-all segment group" 
+                                            id="segment-{{ loop.index0 }}" 
+                                            data-start="{{ segment.start }}" 
+                                            data-end="{{ segment.end }}"
+                                            onclick="jumpToSegment({{ loop.index0 }})"
+                                        >
+                                            <div class="flex justify-between items-center mb-1">
+                                                <div class="text-blue-600 text-xs font-medium tabular-nums">
+                                                    {{ '%02d:%02d' % ((segment.start / 60)|int, (segment.start % 60)|int) }} - {{ '%02d:%02d' % ((segment.end / 60)|int, (segment.end % 60)|int) }}
+                                                </div>
+                                                <div class="opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
+                                                    <button class="text-gray-400 hover:text-blue-600 p-1" title="Copy segment" onclick="event.stopPropagation(); copySegmentText({{ loop.index0 }})">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div class="opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
-                                                <button class="text-gray-400 hover:text-blue-600 p-1" title="Copy segment" onclick="event.stopPropagation(); copySegmentText({{ loop.index0 }})">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                                                    </svg>
-                                                </button>
-                                            </div>
+                                            <p class="segment-text text-gray-800">{{ segment.text }}</p>
                                         </div>
-                                        <p class="segment-text text-gray-800">{{ segment.text }}</p>
-                                    </div>
-                                    {% endfor %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <div class="p-4 text-center">
+                                            <p class="text-gray-500">No transcript segments available</p>
+                                        </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -325,6 +353,14 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
                                             Meeting Insights
+                                        </span>
+                                    </button>
+                                    <button id="tab-key-moments" onclick="switchTab('key-moments')" class="flex-1 py-3 px-4 text-gray-400 border-b-2 border-transparent hover:text-gray-300 font-medium text-sm">
+                                        <span class="flex items-center justify-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                            Key Moments
                                         </span>
                                     </button>
                                 </div>
@@ -478,7 +514,120 @@
                                         </div>
                                     </div>
                                 </div>
+                                
+                                <!-- Key Moments Panel -->
+                                <div id="panel-key-moments" class="p-5 hidden">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h3 class="text-lg font-medium text-primary-300">Key Visual Moments</h3>
+                                        <div class="flex space-x-2">
+                                            <select id="doc-format-select" class="text-xs bg-gray-100 border border-gray-300 rounded-lg px-2 py-1">
+                                                <option value="confluence">Confluence Format</option>
+                                                <option value="markdown">Markdown Format</option>
+                                                <option value="plain">Plain Text</option>
+                                            </select>
+                                            <button 
+                                                class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-full transition"
+                                                onclick="copyDocumentation()">
+                                                <span class="flex items-center">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                                    </svg>
+                                                    Copy All for Documentation
+                                                </span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Preview Box for Documentation Format -->
+                                    <div id="documentation-preview" class="mb-4 hidden border border-gray-200 rounded-lg p-4 bg-white text-sm">
+                                        <div class="flex justify-between items-center mb-2">
+                                            <h4 class="font-medium text-gray-700">Documentation Preview</h4>
+                                            <button onclick="toggleDocPreview()" class="text-xs text-gray-500 hover:text-gray-700">
+                                                Hide Preview
+                                            </button>
+                                        </div>
+                                        <div id="doc-preview-content" class="whitespace-pre-wrap font-mono text-gray-800 text-xs overflow-auto max-h-64 bg-gray-50 p-2 rounded"></div>
+                                    </div>
+                                    
+                                    {% if transcript.key_moments and transcript.key_moments|length > 0 %}
+                                        <div class="space-y-4">
+                                            {% for moment in transcript.key_moments %}
+                                                <div class="rounded-lg border border-gray-200 overflow-hidden">
+                                                    <div class="bg-gray-50 px-4 py-2 flex justify-between items-center">
+                                                        <h4 class="text-sm font-medium text-gray-700">{{ moment.title|default(moment.description[:30] ~ '...') }}</h4>
+                                                        <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                                                            {{ moment.timestamp }}
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    {% if moment.screenshot_path %}
+                                                        <div class="relative">
+                                                            <img src="{{ moment.screenshot_path }}" alt="{{ moment.title }}" class="w-full h-auto" 
+                                                                onerror="this.onerror=null; this.src='/static/img/placeholder.jpg';">
+                                                            <div class="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <button 
+                                                                    onclick="event.stopPropagation(); downloadImage('{{ moment.screenshot_path }}', 'screenshot_{{ loop.index }}.jpg')" 
+                                                                    class="bg-white/80 hover:bg-white p-1.5 rounded-full shadow-sm text-gray-700 hover:text-blue-600 transition-colors"
+                                                                    title="Download image">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    {% else %}
+                                                        <div class="py-6 px-4 text-center bg-gray-50">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                            </svg>
+                                                            <span class="text-sm text-gray-500">Screenshot not available</span>
+                                                        </div>
+                                                    {% endif %}
+                                                    
+                                                    <div class="px-4 py-3 bg-white">
+                                                        <p class="text-sm text-gray-600 mb-2">{{ moment.description }}</p>
+                                                        
+                                                        {% if moment.transcript_text %}
+                                                        <div class="border-t border-gray-100 pt-2 mt-1">
+                                                            <div class="flex justify-between items-center mb-1">
+                                                                <span class="text-xs text-gray-500">Transcript:</span>
+                                                                <button 
+                                                                    onclick="event.stopPropagation(); copyText('{{ moment.transcript_text|replace("'", "\\'") }}')" 
+                                                                    class="text-xs text-blue-600 hover:text-blue-700 flex items-center">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                                                    </svg>
+                                                                    Copy
+                                                                </button>
+                                                            </div>
+                                                            <p class="text-xs text-gray-600 bg-gray-50 p-2 rounded">{{ moment.transcript_text }}</p>
+                                                            
+                                                            <button 
+                                                                class="mt-2 w-full text-xs text-blue-600 hover:text-blue-800 py-1 flex items-center justify-center"
+                                                                onclick="jumpToTimestamp('{{ moment.timestamp }}')">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                                                                </svg>
+                                                                Jump to this moment
+                                                            </button>
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <div class="bg-gray-50 rounded-lg border border-gray-200 p-6 text-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto mb-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                            <p class="text-gray-500 mb-2">No key visual moments identified</p>
+                                            <p class="text-xs text-gray-500">No segments with significant visual content were found in this transcript.</p>
+                                        </div>
+                                    {% endif %}
+                                </div>
                             </div>
+                            
                             <!-- Search panel -->
                             <div class="bg-white rounded-xl p-5 shadow-lg">
                                 <h3 class="text-lg font-medium mb-4 text-blue-700">Search Transcript</h3>
@@ -502,7 +651,13 @@
                                 <div class="space-y-3 text-sm">
                                     <div class="flex justify-between">
                                         <span class="text-gray-500">Duration:</span>
-                                        <span class="font-medium text-gray-800">{{ (transcript.segments[-1].end / 60)|int }}m {{ (transcript.segments[-1].end % 60)|int }}s</span>
+                                        <span class="font-medium text-gray-800">
+                                            {% if transcript.segments and transcript.segments|length > 0 %}
+                                                {{ (transcript.segments[-1].end / 60)|int }}m {{ (transcript.segments[-1].end % 60)|int }}s
+                                            {% else %}
+                                                0m 0s
+                                            {% endif %}
+                                        </span>
                                     </div>
                                     <div class="flex justify-between">
                                         <span class="text-gray-500">Segments:</span>
@@ -534,7 +689,13 @@
     </div>
     <script src="/static/js/main.js"></script>
     <script>
+        {% if transcript.segments and transcript.segments|length > 0 %}
         const segments = JSON.parse('{{ transcript.segments|tojson }}');
+        const totalDuration = {{ transcript.segments[-1].end }};
+        {% else %}
+        const segments = []; // Empty segments array as fallback
+        const totalDuration = 0;
+        {% endif %}
         let currentSegmentIndex = -1;
         
         document.addEventListener('DOMContentLoaded', function() {
@@ -548,9 +709,14 @@
             function startScrolling() {
                 const speed = parseFloat(speedSelect.value);
                 const pixelsPerSecond = 50 / speed; // Adjust this for smoother/faster scrolling
-                let lastTime = segments[segments.length - 1].end;
-
+                
                 scrollInterval = setInterval(() => {
+                    if (segments.length === 0) {
+                        stopScrolling();
+                        return;
+                    }
+                    
+                    const lastTime = totalDuration;
                     const currentTime = parseFloat(document.getElementById('current-time').textContent.split(':').reduce((acc, time) => (60 * acc) + +time));
                     const nextTime = currentTime + (1 / speed);
                     if (nextTime >= lastTime) {
@@ -584,49 +750,59 @@
                 playBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
             }
 
-            playBtn.addEventListener('click', () => {
-                if (isPlaying) {
-                    stopScrolling();
-                } else {
-                    isPlaying = true;
-                    playBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>'; // Pause icon
-                    startScrolling();
-                }
-            });
+            if (playBtn) {
+                playBtn.addEventListener('click', () => {
+                    if (isPlaying) {
+                        stopScrolling();
+                    } else {
+                        isPlaying = true;
+                        playBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>'; // Pause icon
+                        startScrolling();
+                    }
+                });
+            }
 
-            document.getElementById('rewind-btn').addEventListener('click', () => {
-                const currentTime = parseFloat(document.getElementById('current-time').textContent.split(':').reduce((acc, time) => (60 * acc) + +time));
-                const newTime = Math.max(0, currentTime - 10);
-                const newSegment = segments.find(s => s.start >= newTime) || segments[0];
-                jumpToSegment(segments.indexOf(newSegment));
-            });
+            const rewindBtn = document.getElementById('rewind-btn');
+            if (rewindBtn) {
+                rewindBtn.addEventListener('click', () => {
+                    if (segments.length === 0) return;
+                    
+                    const currentTime = parseFloat(document.getElementById('current-time').textContent.split(':').reduce((acc, time) => (60 * acc) + +time));
+                    const newTime = Math.max(0, currentTime - 10);
+                    const newSegment = segments.find(s => s.start >= newTime) || segments[0];
+                    jumpToSegment(segments.indexOf(newSegment));
+                });
+            }
             
             // Add timeline click functionality
             const timelineContainer = document.getElementById('timeline-container');
-            timelineContainer.addEventListener('click', function(e) {
-                const rect = this.getBoundingClientRect();
-                const clickX = e.clientX - rect.left;
-                const percentage = (clickX / rect.width);
-                
-                // Get timestamp at click position
-                const totalDuration = segments[segments.length - 1].end;
-                const clickedTime = percentage * totalDuration;
-                
-                // Find closest segment to the clicked time
-                let closestSegment = 0;
-                let minDistance = Number.MAX_VALUE;
-                
-                segments.forEach((segment, index) => {
-                    const distance = Math.abs(segment.start - clickedTime);
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        closestSegment = index;
-                    }
+            if (timelineContainer) {
+                timelineContainer.addEventListener('click', function(e) {
+                    if (segments.length === 0) return;
+                    
+                    const rect = this.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    const percentage = (clickX / rect.width);
+                    
+                    // Get timestamp at click position
+                    const clickedTime = percentage * totalDuration;
+                    
+                    // Find closest segment to the clicked time
+                    let closestSegment = 0;
+                    let minDistance = Number.MAX_VALUE;
+                    
+                    segments.forEach((segment, index) => {
+                        const distance = Math.abs(segment.start - clickedTime);
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            closestSegment = index;
+                        }
+                    });
+                    
+                    // Jump to that segment
+                    jumpToSegment(closestSegment);
                 });
-                
-                // Jump to that segment
-                jumpToSegment(closestSegment);
-            });
+            }
             
             // Search functionality
             const searchInput = document.getElementById('search');
@@ -636,16 +812,18 @@
             const resultsCount = document.getElementById('results-count');
             
             // Connect the two search inputs
-            transcriptSearchInput.addEventListener('input', function() {
-                searchInput.value = this.value;
-                searchInput.dispatchEvent(new Event('input'));
-            });
+            if (transcriptSearchInput && searchInput) {
+                transcriptSearchInput.addEventListener('input', function() {
+                    searchInput.value = this.value;
+                    searchInput.dispatchEvent(new Event('input'));
+                });
             
-            searchInput.addEventListener('input', function() {
-                transcriptSearchInput.value = this.value;
-                const searchTerm = this.value.toLowerCase().trim();
-                highlightSearchTermInSegments(searchTerm);
-            });
+                searchInput.addEventListener('input', function() {
+                    transcriptSearchInput.value = this.value;
+                    const searchTerm = this.value.toLowerCase().trim();
+                    highlightSearchTermInSegments(searchTerm);
+                });
+            }
             
             // Close search results
             const closeSearchResults = document.getElementById('close-search-results');
@@ -660,59 +838,66 @@
             const cancelDeleteBtn = document.getElementById('cancel-delete');
             const confirmDeleteBtn = document.getElementById('confirm-delete');
             
-            cancelDeleteBtn.addEventListener('click', function() {
-                deleteModal.classList.add('hidden');
-            });
-            
-            confirmDeleteBtn.addEventListener('click', function() {
-                fetch('/delete/{{ transcript.id }}', {
-                    method: 'POST',
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        window.location.href = '/dashboard';
-                    } else {
-                        alert('Error deleting transcript: ' + (data.error || 'Unknown error'));
-                        deleteModal.classList.add('hidden');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while deleting the transcript');
+            if (cancelDeleteBtn) {
+                cancelDeleteBtn.addEventListener('click', function() {
                     deleteModal.classList.add('hidden');
                 });
-            });
+            }
+            
+            if (confirmDeleteBtn) {
+                confirmDeleteBtn.addEventListener('click', function() {
+                    fetch('/delete/{{ transcript.id }}', {
+                        method: 'POST',
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.href = '/dashboard';
+                        } else {
+                            alert('Error deleting transcript: ' + (data.error || 'Unknown error'));
+                            deleteModal.classList.add('hidden');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while deleting the transcript');
+                        deleteModal.classList.add('hidden');
+                    });
+                });
+            }
             
             // Add playhead indicator
             const playhead = document.getElementById('playhead');
             
-            timelineContainer.addEventListener('mousemove', function(e) {
-                const rect = this.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const percentage = (x / rect.width) * 100;
+            if (timelineContainer && playhead) {
+                timelineContainer.addEventListener('mousemove', function(e) {
+                    const rect = this.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const percentage = (x / rect.width) * 100;
+                    
+                    playhead.style.left = `${percentage}%`;
+                    playhead.classList.remove('hidden');
+                    
+                    // Calculate time at this position
+                    const timeAt = (percentage / 100) * totalDuration;
+                    
+                    // Show time tooltip
+                    playhead.setAttribute('title', formatTime(timeAt));
+                });
                 
-                playhead.style.left = `${percentage}%`;
-                playhead.classList.remove('hidden');
-                
-                // Calculate time at this position
-                const totalDuration = segments[segments.length - 1].end;
-                const timeAt = (percentage / 100) * totalDuration;
-                
-                // Show time tooltip
-                playhead.setAttribute('title', formatTime(timeAt));
-            });
-            
-            timelineContainer.addEventListener('mouseleave', function() {
-                playhead.classList.add('hidden');
-            });
+                timelineContainer.addEventListener('mouseleave', function() {
+                    playhead.classList.add('hidden');
+                });
+            }
             
             // Check for URL parameters for search
             const urlParams = new URLSearchParams(window.location.search);
             const searchParam = urlParams.get('search');
-            if (searchParam) {
+            if (searchParam && searchInput) {
                 searchInput.value = searchParam;
-                transcriptSearchInput.value = searchParam;
+                if (transcriptSearchInput) {
+                    transcriptSearchInput.value = searchParam;
+                }
                 highlightSearchTermInSegments(searchParam);
             }
             
@@ -722,42 +907,96 @@
         
         // Function to switch between tabs
         function switchTab(tabName) {
+            console.log(`Switching to tab: ${tabName}`);
+            
             // Hide all panels
-            document.getElementById('panel-summary').classList.add('hidden');
-            document.getElementById('panel-topics').classList.add('hidden');
-            document.getElementById('panel-insights').classList.add('hidden');
+            const panels = [
+                'panel-summary', 
+                'panel-topics', 
+                'panel-insights', 
+                'panel-key-moments'
+            ];
+            
+            panels.forEach(panelId => {
+                const panel = document.getElementById(panelId);
+                if (panel) {
+                    panel.classList.add('hidden');
+                }
+            });
             
             // Reset all tab buttons
-            document.getElementById('tab-summary').classList.remove('border-primary-500', 'text-primary-300');
-            document.getElementById('tab-summary').classList.add('border-transparent', 'text-gray-400');
-            document.getElementById('tab-topics').classList.remove('border-primary-500', 'text-primary-300');
-            document.getElementById('tab-topics').classList.add('border-transparent', 'text-gray-400');
-            document.getElementById('tab-insights').classList.remove('border-primary-500', 'text-primary-300');
-            document.getElementById('tab-insights').classList.add('border-transparent', 'text-gray-400');
+            const tabButtons = [
+                'tab-summary', 
+                'tab-topics', 
+                'tab-insights', 
+                'tab-key-moments'
+            ];
+            
+            tabButtons.forEach(tabId => {
+                const tab = document.getElementById(tabId);
+                if (tab) {
+                    tab.classList.remove('border-primary-500', 'text-primary-300', 'border-blue-500', 'text-blue-700');
+                    tab.classList.add('border-transparent', 'text-gray-400');
+                }
+            });
             
             // Show selected panel and active tab
-            document.getElementById(`panel-${tabName}`).classList.remove('hidden');
-            document.getElementById(`tab-${tabName}`).classList.remove('border-transparent', 'text-gray-400');
-            document.getElementById(`tab-${tabName}`).classList.add('border-primary-500', 'text-primary-300');
+            const selectedPanel = document.getElementById(`panel-${tabName}`);
+            if (selectedPanel) {
+                selectedPanel.classList.remove('hidden');
+            } else {
+                console.warn(`Panel not found: panel-${tabName}`);
+            }
+            
+            const selectedTab = document.getElementById(`tab-${tabName}`);
+            if (selectedTab) {
+                selectedTab.classList.remove('border-transparent', 'text-gray-400');
+                selectedTab.classList.add('border-primary-500', 'text-primary-300');
+            } else {
+                console.warn(`Tab button not found: tab-${tabName}`);
+            }
+            
+            console.log(`Switched to tab: ${tabName}`);
         }
         
         // Function to jump to a specific segment in the transcript
         function jumpToSegment(index) {
+            if (segments.length === 0 || index < 0 || index >= segments.length) {
+                return;
+            }
+            
             if (currentSegmentIndex >= 0) {
-                document.getElementById('segment-' + currentSegmentIndex).classList.remove('bg-gray-100');
-                document.querySelectorAll('.timeline-segment')[currentSegmentIndex].classList.remove('active');
+                const currentSegmentElement = document.getElementById('segment-' + currentSegmentIndex);
+                if (currentSegmentElement) {
+                    currentSegmentElement.classList.remove('bg-gray-100');
+                }
+                
+                const currentTimelineSegments = document.querySelectorAll('.timeline-segment');
+                if (currentTimelineSegments.length > currentSegmentIndex) {
+                    currentTimelineSegments[currentSegmentIndex].classList.remove('active');
+                }
             }
             
             currentSegmentIndex = index;
             const segment = segments[index];
             
-            document.getElementById('segment-' + index).classList.add('bg-gray-100');
-            document.querySelectorAll('.timeline-segment')[index].classList.add('active');
-            document.getElementById('current-time').textContent = formatTime(segment.start);
-            
             const segmentElement = document.getElementById('segment-' + index);
-            const transcriptContent = document.getElementById('transcript-content');
             if (segmentElement) {
+                segmentElement.classList.add('bg-gray-100');
+            }
+            
+            const timelineSegments = document.querySelectorAll('.timeline-segment');
+            if (timelineSegments.length > index) {
+                timelineSegments[index].classList.add('active');
+            }
+            
+            const currentTimeElement = document.getElementById('current-time');
+            if (currentTimeElement) {
+                currentTimeElement.textContent = formatTime(segment.start);
+            }
+            
+            const transcriptContent = document.getElementById('transcript-content');
+            if (segmentElement && transcriptContent) {
                 // Calculate the scroll position to center the segment in view
                 const segmentTop = segmentElement.offsetTop;
                 const containerHeight = transcriptContent.clientHeight;
@@ -767,19 +1006,29 @@
                 transcriptContent.scrollTop = segmentTop - (containerHeight / 2) + (segmentHeight / 2);
             }
             
-            document.getElementById('timeline-progress').style.width = (segment.start / segments[segments.length - 1].end * 100) + '%';
+            const timelineProgress = document.getElementById('timeline-progress');
+            if (timelineProgress) {
+                timelineProgress.style.width = (segment.start / totalDuration * 100) + '%';
+            }
         }
         
-        // Handle search functionality
-        // Handle search functionality
+        // Function to handle search functionality
         function highlightSearchTermInSegments(searchTerm) {
+            if (segments.length === 0) return;
+            
             // Clear previous highlighting
             document.querySelectorAll('.segment-text').forEach(function(el, index) {
-                el.textContent = segments[index].text;
+                if (index < segments.length) {
+                    el.textContent = segments[index].text;
+                }
             });
             
-            if (searchTerm.length < 2) {
-                searchResults.classList.add('hidden');
+            const searchResults = document.getElementById('search-results');
+            
+            if (searchTerm.length < 2 || !searchResults) {
+                if (searchResults) {
+                    searchResults.classList.add('hidden');
+                }
                 return;
             }
             
@@ -789,9 +1038,12 @@
                 const segmentText = segment.text.toLowerCase();
                 if (segmentText.includes(searchTerm)) {
                     // Highlight the text
-                    const segmentEl = document.querySelectorAll('.segment-text')[index];
-                    const regex = new RegExp('(' + searchTerm + ')', 'gi');
-                    segmentEl.innerHTML = segment.text.replace(regex, '<span class="bg-primary-900/70 text-primary-200 px-0.5 rounded">$1</span>');
+                    const segmentElements = document.querySelectorAll('.segment-text');
+                    if (index < segmentElements.length) {
+                        const segmentEl = segmentElements[index];
+                        const regex = new RegExp('(' + searchTerm + ')', 'gi');
+                        segmentEl.innerHTML = segment.text.replace(regex, '<span class="bg-primary-900/70 text-primary-200 px-0.5 rounded">$1</span>');
+                    }
                     
                     // Add to results
                     results.push({
@@ -803,37 +1055,42 @@
             });
             
             // Update results list
-            resultsList.innerHTML = '';
-            results.forEach(function(result) {
-                const item = document.createElement('li');
-                item.className = 'p-2 rounded-lg hover:bg-dark-900/50 cursor-pointer transition-colors';
-                
-                const time = document.createElement('div');
-                time.className = 'text-xs text-primary-400 font-medium';
-                time.textContent = formatTime(result.start);
-                
-                const text = document.createElement('p');
-                text.className = 'text-sm';
-                const regex = new RegExp('(' + searchTerm + ')', 'gi');
-                text.innerHTML = result.text.replace(regex, '<span class="bg-primary-900/70 text-primary-200 px-0.5 rounded">$1</span>');
-                
-                item.appendChild(time);
-                item.appendChild(text);
-                
-                item.addEventListener('click', function() {
-                    jumpToSegment(result.index);
+            const resultsList = document.getElementById('results-list');
+            const resultsCount = document.getElementById('results-count');
+            
+            if (resultsList && resultsCount) {
+                resultsList.innerHTML = '';
+                results.forEach(function(result) {
+                    const item = document.createElement('li');
+                    item.className = 'p-2 rounded-lg hover:bg-dark-900/50 cursor-pointer transition-colors';
+                    
+                    const time = document.createElement('div');
+                    time.className = 'text-xs text-primary-400 font-medium';
+                    time.textContent = formatTime(result.start);
+                    
+                    const text = document.createElement('p');
+                    text.className = 'text-sm';
+                    const regex = new RegExp('(' + searchTerm + ')', 'gi');
+                    text.innerHTML = result.text.replace(regex, '<span class="bg-primary-900/70 text-primary-200 px-0.5 rounded">$1</span>');
+                    
+                    item.appendChild(time);
+                    item.appendChild(text);
+                    
+                    item.addEventListener('click', function() {
+                        jumpToSegment(result.index);
+                    });
+                    
+                    resultsList.appendChild(item);
                 });
                 
-                resultsList.appendChild(item);
-            });
-            
-            // Update count and show results
-            resultsCount.textContent = results.length;
-            
-            if (results.length > 0) {
-                searchResults.classList.remove('hidden');
-            } else {
-                searchResults.classList.add('hidden');
+                // Update count and show results
+                resultsCount.textContent = results.length;
+                
+                if (results.length > 0) {
+                    searchResults.classList.remove('hidden');
+                } else {
+                    searchResults.classList.add('hidden');
+                }
             }
         }
         
@@ -851,7 +1108,10 @@
         
         // Function to delete transcript
         function deleteTranscript() {
-            document.getElementById('delete-modal').classList.remove('hidden');
+            const deleteModal = document.getElementById('delete-modal');
+            if (deleteModal) {
+                deleteModal.classList.remove('hidden');
+            }
         }
         
         // Function to format LLM output (convert newlines to HTML, handle bullet points, etc.)
@@ -871,6 +1131,8 @@
         function showNotification(message, isError = false) {
             const toast = document.getElementById('notification-toast');
             const toastMessage = document.getElementById('notification-message');
+            
+            if (!toast || !toastMessage) return;
             
             toastMessage.textContent = message;
             
@@ -895,6 +1157,8 @@
         
         // Function to copy segment text
         function copySegmentText(index) {
+            if (segments.length === 0 || index < 0 || index >= segments.length) return;
+            
             const text = segments[index].text;
             navigator.clipboard.writeText(text)
                 .then(() => {
@@ -912,6 +1176,8 @@
             const segments = document.querySelectorAll('.segment');
             const viewModeButton = document.getElementById('view-mode-toggle');
             const viewModeText = document.getElementById('view-mode-text');
+            
+            if (!transcriptContent || !viewModeText) return;
             
             // Check current mode
             const isCondensed = transcriptContent.classList.contains('condensed-view');
@@ -934,6 +1200,229 @@
                     segment.classList.add('py-1', 'px-2', 'mb-1');
                 });
                 viewModeText.textContent = 'Normal';
+            }
+        }
+
+        // Function to find segment by timestamp
+        function findSegmentByTimestamp(timestamp) {
+            if (segments.length === 0) return -1;
+            
+            // Find the closest segment to the given timestamp
+            let closestSegment = 0;
+            let minDistance = Number.MAX_VALUE;
+            
+            segments.forEach((segment, index) => {
+                const distance = Math.abs(segment.start - timestamp);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestSegment = index;
+                }
+            });
+            
+            return closestSegment;
+        }
+        
+        // Function to copy image URL to clipboard
+        function copyImage(path) {
+            // Get the full URL
+            const fullUrl = window.location.origin + path;
+            navigator.clipboard.writeText(fullUrl)
+                .then(() => {
+                    showNotification('Screenshot URL copied to clipboard');
+                })
+                .catch(err => {
+                    console.error('Could not copy text: ', err);
+                    showNotification('Failed to copy URL', true);
+                });
+        }
+
+        // Function to jump to a specific timestamp in the transcript
+        function jumpToTimestamp(timestamp) {
+            // Convert timestamp to seconds if it's in format MM:SS or HH:MM:SS
+            let seconds = 0;
+            if (typeof timestamp === 'string' && timestamp.includes(':')) {
+                const parts = timestamp.split(':');
+                if (parts.length === 3) { // HH:MM:SS
+                    seconds = parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseFloat(parts[2]);
+                } else if (parts.length === 2) { // MM:SS
+                    seconds = parseInt(parts[0]) * 60 + parseFloat(parts[1]);
+                }
+            } else {
+                seconds = parseFloat(timestamp);
+            }
+            
+            // Find the segment closest to this timestamp
+            const segmentIndex = findSegmentByTimestamp(seconds);
+            
+            // Jump to the segment
+            if (segmentIndex >= 0) {
+                // Switch to transcript tab first if needed
+                const transcriptTab = document.querySelector('#tab-summary');
+                if (transcriptTab && transcriptTab.classList.contains('text-primary-300')) {
+                    // We're already on a good tab, no need to switch
+                } else {
+                    // Switch to summary tab first to ensure the UI is in a good state
+                    switchTab('summary');
+                }
+                
+                // Wait a bit then jump to segment
+                setTimeout(() => {
+                    jumpToSegment(segmentIndex);
+                    // Highlight the segment briefly
+                    const segment = document.getElementById('segment-' + segmentIndex);
+                    if (segment) {
+                        segment.classList.add('bg-blue-100');
+                        setTimeout(() => {
+                            segment.classList.remove('bg-blue-100');
+                        }, 2000);
+                    }
+                }, 100);
+            }
+        }
+
+        // Function to copy text to clipboard
+        function copyText(text) {
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    showNotification('Text copied to clipboard');
+                })
+                .catch(err => {
+                    console.error('Could not copy text: ', err);
+                    showNotification('Failed to copy text', true);
+                });
+        }
+
+        // Function to download an image
+        function downloadImage(url, filename) {
+            // Create a temporary link
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename || 'screenshot.jpg';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // Function to copy image URL to clipboard
+        function copyImageUrl(url) {
+            // Make sure it's an absolute URL
+            const fullUrl = url.startsWith('http') ? url : window.location.origin + url;
+            
+            navigator.clipboard.writeText(fullUrl)
+                .then(() => {
+                    showNotification('Image URL copied to clipboard');
+                })
+                .catch(err => {
+                    console.error('Could not copy URL: ', err);
+                    showNotification('Failed to copy URL', true);
+                });
+        }
+
+        // Generate documentation from key moments
+        function generateDocumentation() {
+            const format = document.getElementById('doc-format-select')?.value || 'markdown';
+            const transcriptTitle = "{{ transcript.title }}";
+            const moments = Array.from(document.querySelectorAll('#panel-key-moments .rounded-lg.border'));
+            
+            if (moments.length === 0) {
+                return "No key moments found to document.";
+            }
+            
+            let docContent = "";
+            
+            // Start with title/header
+            if (format === 'confluence') {
+                docContent += `h1. ${transcriptTitle} - Key Moments\n\n`;
+            } else if (format === 'markdown') {
+                docContent += `# ${transcriptTitle} - Key Moments\n\n`;
+            } else {
+                docContent += `${transcriptTitle} - KEY MOMENTS\n${'='.repeat(transcriptTitle.length + 14)}\n\n`;
+            }
+            
+            // Add each moment
+            moments.forEach((moment, index) => {
+                // Extract details from the moment card
+                const title = moment.querySelector('h4')?.textContent || `Moment ${index + 1}`;
+                const timestamp = moment.querySelector('.rounded-full')?.textContent.trim() || "";
+                const description = moment.querySelector('p.text-gray-600')?.textContent || "";
+                const transcript = moment.querySelector('.text-xs.text-gray-600.bg-gray-50')?.textContent || "";
+                
+                // Get screenshot URL if available
+                let screenshotUrl = "";
+                const img = moment.querySelector('img');
+                if (img && img.src) {
+                    screenshotUrl = img.src;
+                }
+                
+                // Format based on selected output format
+                if (format === 'confluence') {
+                    docContent += `h2. ${title} (${timestamp})\n\n`;
+                    docContent += `${description}\n\n`;
+                    
+                    if (screenshotUrl) {
+                        // Confluence uses ! for images
+                        docContent += `!${screenshotUrl}|width=500!\n\n`;
+                    }
+                    
+                    docContent += `{quote}\n${transcript}\n{quote}\n\n`;
+                    docContent += `----\n\n`;
+                } 
+                else if (format === 'markdown') {
+                    docContent += `## ${title} (${timestamp})\n\n`;
+                    docContent += `${description}\n\n`;
+                    
+                    if (screenshotUrl) {
+                        docContent += `![Screenshot at ${timestamp}](${screenshotUrl})\n\n`;
+                    }
+                    
+                    docContent += `> ${transcript}\n\n`;
+                    docContent += `---\n\n`;
+                }
+                else { // Plain text
+                    docContent += `${title} (${timestamp})\n${'~'.repeat(title.length + timestamp.length + 3)}\n\n`;
+                    docContent += `${description}\n\n`;
+                    
+                    if (screenshotUrl) {
+                        docContent += `[Screenshot URL: ${screenshotUrl}]\n\n`;
+                    }
+                    
+                    docContent += `"${transcript}"\n\n`;
+                    docContent += `----------\n\n`;
+                }
+            });
+            
+            return docContent;
+        }
+
+        // Copy documentation to clipboard and show preview
+        function copyDocumentation() {
+            const docContent = generateDocumentation();
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(docContent)
+                .then(() => {
+                    showNotification('Documentation copied to clipboard - Ready for Confluence!');
+                    
+                    // Show preview
+                    const previewBox = document.getElementById('documentation-preview');
+                    const previewContent = document.getElementById('doc-preview-content');
+                    
+                    if (previewBox && previewContent) {
+                        previewContent.textContent = docContent;
+                        previewBox.classList.remove('hidden');
+                    }
+                })
+                .catch(err => {
+                    console.error('Could not copy documentation: ', err);
+                    showNotification('Failed to copy documentation', true);
+                });
+        }
+
+        // Toggle documentation preview visibility
+        function toggleDocPreview() {
+            const previewBox = document.getElementById('documentation-preview');
+            if (previewBox) {
+                previewBox.classList.toggle('hidden');
             }
         }
     </script>

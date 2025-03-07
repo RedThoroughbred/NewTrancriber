@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ transcript.title }} - Key Visual Moments</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        dark: {
+                            800: '#1f2937',
+                            900: '#111827',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass {
+                @apply bg-dark-900/80 backdrop-blur-md border border-white/5;
+            }
+            .btn-hover {
+                @apply transition-all duration-300 ease-in-out hover:shadow-lg hover:-translate-y-1;
+            }
+            .scrollbar-thin {
+                scrollbar-width: thin;
+            }
+            .scrollbar-thin::-webkit-scrollbar {
+                width: 6px;
+                height: 6px;
+            }
+            .scrollbar-thin::-webkit-scrollbar-track {
+                background: rgba(31, 41, 55, 0.2);
+                border-radius: 10px;
+            }
+            .scrollbar-thin::-webkit-scrollbar-thumb {
+                background: rgba(14, 165, 233, 0.5);
+                border-radius: 10px;
+            }
+            .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+                background: rgba(14, 165, 233, 0.7);
+            }
+            /* Animations */
+            @keyframes pulse-glow {
+                0%, 100% { opacity: 0.8; transform: scale(1); }
+                50% { opacity: 1; transform: scale(1.05); }
+            }
+            .animate-pulse-glow {
+                animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50 text-gray-800 light-mode">
+    <div class="container mx-auto px-4 py-6">
+        <header class="flex justify-between items-center mb-8 bg-white border border-gray-200 rounded-xl shadow-sm p-4">
+            <div class="flex items-center space-x-4">
+                <h1 class="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-500 to-blue-700 bg-clip-text text-transparent">
+                    Video Transcriber
+                </h1>
+            </div>
+            <nav class="flex space-x-6 items-center">
+                <a href="/" class="text-blue-600 hover:text-blue-800 transition flex items-center space-x-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    <span>Home</span>
+                </a>
+                <a href="/dashboard" class="text-blue-600 hover:text-blue-800 transition flex items-center space-x-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                    </svg>
+                    <span>Dashboard</span>
+                </a>
+            </nav>
+        </header>
+        
+        <main class="max-w-7xl mx-auto">
+            <!-- File info and actions bar -->
+            <div class="bg-white rounded-xl p-5 mb-6 transition-all shadow-sm border border-gray-200">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800">{{ transcript.title }}</h2>
+                            <p class="text-gray-500 text-sm flex items-center">
+                                <span class="mr-3">Key Visual Moments</span>
+                                <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-600">
+                                    {{ key_moments|length }} moments
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap md:flex-nowrap gap-2">
+                        <a href="/transcript/{{ transcript.id }}" class="btn-hover bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                            Back to Transcript
+                        </a>
+                        <a href="/download/{{ transcript.id }}" class="btn-hover bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg border border-gray-300 transition flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Download Report
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <section class="mb-10">
+                {% if key_moments %}
+                    <div class="space-y-8">
+                        {% for moment in key_moments %}
+                            <div class="bg-white rounded-xl shadow-md overflow-hidden transition-shadow hover:shadow-lg" id="moment-{{ loop.index }}">
+                                <div class="p-5 border-b border-gray-200">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h2 class="text-xl font-semibold text-blue-800">{{ moment.title }}</h2>
+                                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                                            {% set minutes = (moment.timestamp // 60)|int %}
+                                            {% set seconds = (moment.timestamp % 60)|int %}
+                                            {{ '%02d:%02d'|format(minutes, seconds) }}
+                                        </span>
+                                    </div>
+                                    <p class="text-gray-700">{{ moment.description }}</p>
+                                </div>
+                                
+                                <div class="relative">
+                                    {% if moment.screenshot_path %}
+                                        <img src="{{ moment.screenshot_path }}" alt="{{ moment.title }}" class="w-full object-contain max-h-96">
+                                        <div class="absolute top-2 right-2">
+                                            <button onclick="copyScreenshotLink('{{ moment.screenshot_path }}')" class="bg-white/80 hover:bg-white p-2 rounded-full shadow-md text-gray-700 hover:text-blue-600 transition-colors">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    {% else %}
+                                        <div class="w-full h-48 bg-gray-200 flex items-center justify-center">
+                                            <div class="text-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto mb-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                                <span class="text-gray-500">Screenshot not available</span>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="p-5 bg-gray-50">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <h3 class="text-sm font-medium text-gray-500">Transcript at this moment:</h3>
+                                        <button onclick="copyText('{{ moment.transcript_text }}')" class="text-blue-600 hover:text-blue-800 text-sm flex items-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                            </svg>
+                                            Copy
+                                        </button>
+                                    </div>
+                                    <div class="bg-white p-4 rounded border border-gray-200">
+                                        <p class="text-gray-800">{{ moment.transcript_text }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="bg-white rounded-xl shadow-md p-8 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <h2 class="text-xl font-medium text-gray-700 mb-2">No Key Visual Moments</h2>
+                        <p class="text-gray-500">No key visual moments could be identified in this transcript.</p>
+                        <p class="text-gray-500 mt-2">This could be because:</p>
+                        <ul class="mt-2 text-gray-500 list-disc list-inside text-left max-w-md mx-auto">
+                            <li>The meeting didn't have significant visual components</li>
+                            <li>The original video file is not available</li>
+                            <li>There was an error processing the video</li>
+                        </ul>
+                    </div>
+                {% endif %}
+            </section>
+        </main>
+        
+        <!-- Copy notification toast -->
+        <div id="copy-toast" class="fixed bottom-4 right-4 bg-blue-600 backdrop-blur-sm text-white rounded-lg shadow-lg p-4 max-w-xs transform translate-y-10 opacity-0 transition-all duration-300 pointer-events-none z-50 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span id="toast-message">Copied to clipboard!</span>
+        </div>
+    </div>
+    
+    <script src="/static/js/main.js"></script>
+    <script>
+        function copyText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Copied transcript text to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                showToast('Failed to copy text', true);
+            });
+        }
+        
+        function copyScreenshotLink(path) {
+            // Get the full URL
+            const fullUrl = window.location.origin + path;
+            navigator.clipboard.writeText(fullUrl).then(() => {
+                showToast('Copied screenshot link to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy screenshot link: ', err);
+                showToast('Failed to copy link', true);
+            });
+        }
+        
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('copy-toast');
+            const toastMessage = document.getElementById('toast-message');
+            
+            toastMessage.textContent = message;
+            
+            if (isError) {
+                toast.classList.remove('bg-blue-600', 'text-white');
+                toast.classList.add('bg-red-600', 'text-white');
+            } else {
+                toast.classList.remove('bg-red-600', 'text-white');
+                toast.classList.add('bg-blue-600', 'text-white');
+            }
+            
+            // Show the toast
+            toast.classList.remove('translate-y-10', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            
+            // Hide after 3 seconds
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-10', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

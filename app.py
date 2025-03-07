@@ -932,346 +932,259 @@ def download_comparison():
 @app.route('/transcribe', methods=['POST'])
 def transcribe():
     """
-    Enhanced transcribe endpoint that handles multiple files with individual metadata.
-    
-    For each file, it expects:
-    - file_0, file_1, file_2, etc.
-    - title_0, title_1, title_2, etc. (optional)
-    - topic_0, topic_1, topic_2, etc. (optional)
-    - file_count: total number of files
-    
-    It also handles YouTube URL and file path inputs as before.
-    After transcription, generates summary, topics, and action items if LLM is available.
+    Enhanced transcribe endpoint that handles video transcription,
+    extracts key moments, and captures screenshots at those moments.
     """
-    # Clean upload folder
-    for filename in os.listdir(app.config['UPLOAD_FOLDER']):
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        try:
-            if os.path.isfile(file_path):
-                os.unlink(file_path)
-        except Exception as e:
-            print(f"Error deleting {file_path}: {e}")
+    import traceback
+    import logging
     
-    results = []
+    # Set up logging
+    logger = logging.getLogger(__name__)
     
-    # Check if we're dealing with YouTube URL
-    if 'youtube_url' in request.form:
-        from youtube_downloader import download_youtube_video
+    try:
+        # Check if the post request has the file part
+        if 'file' not in request.files and 'youtube_url' not in request.form and 'file_path' not in request.form:
+            logger.warning("No input source provided (file/youtube/path)")
+            return jsonify({'error': 'No input source provided'}), 400
         
-        youtube_url = request.form.get('youtube_url')
-        title = request.form.get('title', '')
-        topic = request.form.get('topic', '')
+        # Process uploaded file, YouTube URL, or file path
+        video_path = None
+        original_filename = None
+        file_id = str(uuid.uuid4())  # Generate a unique ID for this transcription
         
-        try:
-            # Download the YouTube video
-            video_info = download_youtube_video(youtube_url, app.config['UPLOAD_FOLDER'])
-            file_id = video_info['file_id']
-            filepath = video_info['file_path']
-            if not title:
-                title = video_info['title']
-            
-            # Process with Whisper
-            model = get_model()
-            result = model.transcribe(filepath)
-            transcript_text = result['text']
-
-            # LLM analysis (only if available)
-            summary = ""
-            topics = []
-            action_items = []
-            if feature_is_available('llm'):
-                summary = summarize_transcript(transcript_text) or "Failed to generate summary."
-                topics = extract_topics(transcript_text) or []
-                action_items_result = extract_action_items(transcript_text) or {"action_items": []}
-                action_items = action_items_result.get('action_items', [])
-                qa_result = extract_questions_answers(transcript_text) or {"qa_pairs": []}
-                qa_pairs = qa_result.get('qa_pairs', [])
-                
-                decisions_result = extract_decisions(transcript_text) or {"decisions": []}
-                decisions = decisions_result.get('decisions', [])
-                
-                commitments_result = extract_commitments(transcript_text) or {"commitments": []}
-                commitments = commitments_result.get('commitments', [])
-            
-            # Save transcript as JSON with metadata and LLM results
-            transcript_data = {
-                'id': file_id,
-                'title': title,
-                'topic': topic,
-                'original_filename': f"{video_info['title']}.mp4",
-                'date': datetime.now().isoformat(),
-                'filepath': filepath,
-                'transcript': transcript_text,
-                'segments': result['segments'],
-                'youtube_id': video_info['video_id'],
-                'youtube_url': youtube_url,
-                'youtube_channel': video_info['channel'],
-                'summary': summary,
-                'topics': topics,
-                'action_items': action_items,
-                'qa_pairs': qa_pairs,
-                'decisions': decisions,
-                'commitments': commitments
-            }
-            
-            transcript_path = os.path.join(app.config['TRANSCRIPT_FOLDER'], f"{file_id}.json")
-            with open(transcript_path, 'w') as f:
-                json.dump(transcript_data, f)
-            
-            results.append({
-                'id': file_id,
-                'title': title,
-                'success': True
-            })
-            
-        except Exception as e:
-            results.append({
-                'filename': 'YouTube Video',
-                'success': False,
-                'error': str(e)
-            })
-            
-    # Check if we're dealing with a file path
-    elif 'file_path' in request.form:
-        import shutil
+        # Create necessary directories
+        transcripts_dir = os.path.join(app.config['TRANSCRIPT_FOLDER'])
+        uploads_dir = os.path.join(app.config['UPLOAD_FOLDER'])
+        screenshots_dir = os.path.join(app.config['UPLOAD_FOLDER'], f"screenshots_{file_id}")
         
-        file_path = request.form.get('file_path')
-        title = request.form.get('title', os.path.basename(file_path))
-        topic = request.form.get('topic', '')
+        for directory in [transcripts_dir, uploads_dir, screenshots_dir]:
+            os.makedirs(directory, exist_ok=True)
         
-        try:
-            if not os.path.exists(file_path):
-                raise FileNotFoundError(f"File not found: {file_path}")
-            
-            file_id = str(uuid.uuid4())
-            filename = os.path.basename(file_path)
-            dest_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            shutil.copy2(file_path, dest_path)
-            
-            # Process with Whisper
-            model = get_model()
-            result = model.transcribe(dest_path)
-            transcript_text = result['text']
-
-            # LLM analysis (only if available)
-            summary = ""
-            topics = []
-            action_items = []
-            if feature_is_available('llm'):
-                summary = summarize_transcript(transcript_text) or "Failed to generate summary."
-                topics = extract_topics(transcript_text) or []
-                action_items_result = extract_action_items(transcript_text) or {"action_items": []}
-                action_items = action_items_result.get('action_items', [])
-                qa_result = extract_questions_answers(transcript_text) or {"qa_pairs": []}
-                qa_pairs = qa_result.get('qa_pairs', [])
-                
-                decisions_result = extract_decisions(transcript_text) or {"decisions": []}
-                decisions = decisions_result.get('decisions', [])
-                
-                commitments_result = extract_commitments(transcript_text) or {"commitments": []}
-                commitments = commitments_result.get('commitments', [])
-            
-            # Save transcript as JSON with metadata and LLM results
-            transcript_data = {
-                'id': file_id,
-                'title': title,
-                'topic': topic,
-                'original_filename': filename,
-                'date': datetime.now().isoformat(),
-                'filepath': file_path,
-                'transcript': transcript_text,
-                'segments': result['segments'],
-                'summary': summary,
-                'topics': topics,
-                'action_items': action_items,
-                'qa_pairs': qa_pairs,
-                'decisions': decisions,
-                'commitments': commitments
-            }
-            
-            transcript_path = os.path.join(app.config['TRANSCRIPT_FOLDER'], f"{file_id}.json")
-            with open(transcript_path, 'w') as f:
-                json.dump(transcript_data, f)
-            
-            results.append({
-                'id': file_id,
-                'title': title,
-                'success': True
-            })
-            
-        except Exception as e:
-            results.append({
-                'filename': os.path.basename(file_path),
-                'success': False,
-                'error': str(e)
-            })
-            
-    # Check if the post request has multiple files with per-file metadata
-    elif 'file_count' in request.form:
-        file_count = int(request.form.get('file_count', 0))
-        
-        for i in range(file_count):
-            file_key = f'file_{i}'
-            title_key = f'title_{i}'
-            topic_key = f'topic_{i}'
-            
-            if file_key not in request.files:
-                continue
-                
-            file = request.files[file_key]
+        # Handle file upload
+        if 'file' in request.files:
+            file = request.files['file']
             if file.filename == '':
-                continue
-                
-            title = request.form.get(title_key, file.filename)
-            topic = request.form.get(topic_key, '')
+                logger.warning("Empty filename provided")
+                return jsonify({'error': 'No selected file'}), 400
             
             original_filename = secure_filename(file.filename)
-            file_id = str(uuid.uuid4())
-            extension = os.path.splitext(original_filename)[1]
-            filename = f"{file_id}{extension}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            video_path = os.path.join(uploads_dir, f"{file_id}{os.path.splitext(original_filename)[1]}")
             
-            file.save(filepath)
+            # Save the uploaded file
+            logger.info(f"Saving uploaded file to {video_path}")
+            file.save(video_path)
+            
+            title = request.form.get('title', original_filename)
+            topic = request.form.get('topic', '')
+        
+        # Handle YouTube URL
+        elif 'youtube_url' in request.form:
+            from youtube_downloader import download_youtube_video
+            
+            youtube_url = request.form.get('youtube_url')
+            title = request.form.get('title', '')
+            topic = request.form.get('topic', '')
             
             try:
-                model = get_model()
-                result = model.transcribe(filepath)
-                transcript_text = result['text']
-
-                # LLM analysis (only if available)
-                summary = ""
-                topics = []
-                action_items = []
-                if feature_is_available('llm'):
-                    summary = summarize_transcript(transcript_text) or "Failed to generate summary."
-                    topics = extract_topics(transcript_text) or []
-                    action_items_result = extract_action_items(transcript_text) or {"action_items": []}
-                    action_items = action_items_result.get('action_items', [])
-                    qa_result = extract_questions_answers(transcript_text) or {"qa_pairs": []}
-                    qa_pairs = qa_result.get('qa_pairs', [])
-                    
-                    decisions_result = extract_decisions(transcript_text) or {"decisions": []}
-                    decisions = decisions_result.get('decisions', [])
-                    
-                    commitments_result = extract_commitments(transcript_text) or {"commitments": []}
-                    commitments = commitments_result.get('commitments', [])
-                
-                # Save transcript as JSON with metadata and LLM results
-                transcript_data = {
-                    'id': file_id,
-                    'title': title,
-                    'topic': topic,
-                    'original_filename': original_filename,
-                    'date': datetime.now().isoformat(),
-                    'filepath': filepath,
-                    'transcript': transcript_text,
-                    'segments': result['segments'],
-                    'summary': summary,
-                    'topics': topics,
-                    'action_items': action_items,
-                    'qa_pairs': qa_pairs,
-                    'decisions': decisions,
-                    'commitments': commitments
-                }
-                
-                transcript_path = os.path.join(app.config['TRANSCRIPT_FOLDER'], f"{file_id}.json")
-                with open(transcript_path, 'w') as f:
-                    json.dump(transcript_data, f)
-                
-                results.append({
-                    'id': file_id,
-                    'title': title,
-                    'success': True
-                })
-                
+                # Download the YouTube video
+                logger.info(f"Downloading YouTube video: {youtube_url}")
+                video_info = download_youtube_video(youtube_url, uploads_dir)
+                file_id = video_info['file_id']
+                video_path = video_info['file_path']
+                if not title:
+                    title = video_info['title']
+                original_filename = f"{video_info['title']}.mp4"
             except Exception as e:
-                results.append({
-                    'filename': original_filename,
-                    'success': False,
-                    'error': str(e)
-                })
-    
-    # Fallback to the standard file upload format
-    elif 'file' in request.files:
-        files = request.files.getlist('file')
+                logger.error(f"YouTube download failed: {str(e)}")
+                return jsonify({'error': f'Failed to download YouTube video: {str(e)}'}), 400
         
-        for file in files:
-            if file.filename == '':
-                continue
+        # Handle file path input
+        elif 'file_path' in request.form:
+            import shutil
+            
+            file_path = request.form.get('file_path')
+            title = request.form.get('title', os.path.basename(file_path))
+            topic = request.form.get('topic', '')
+            
+            if not os.path.exists(file_path):
+                logger.error(f"File not found: {file_path}")
+                return jsonify({'error': f'File not found: {file_path}'}), 400
+            
+            original_filename = os.path.basename(file_path)
+            video_path = os.path.join(uploads_dir, original_filename)
+            
+            # Copy the file to our uploads directory
+            logger.info(f"Copying file from {file_path} to {video_path}")
+            shutil.copy2(file_path, video_path)
+        
+        # Validate video path
+        if not video_path or not os.path.exists(video_path):
+            logger.error(f"Video file not found at {video_path}")
+            return jsonify({'error': 'Invalid video file'}), 400
+        
+        # Step 1: Transcribe the video with whisper
+        try:
+            logger.info(f"Transcribing video: {video_path}")
+            model = get_model()
+            result = model.transcribe(video_path)
+            transcript_text = result['text']
+            logger.info(f"Transcription complete: {len(transcript_text)} characters")
+        except Exception as e:
+            logger.error(f"Transcription failed: {str(e)}")
+            traceback.print_exc()
+            return jsonify({'error': f'Transcription failed: {str(e)}'}), 500
+        
+        # Step 2: LLM analysis (only if available)
+        summary = ""
+        topics = []
+        action_items = []
+        key_moments = []
+        
+        if feature_is_available('llm'):
+            try:
+                logger.info("Generating summary from transcript")
+                summary = summarize_transcript(transcript_text) or "Failed to generate summary."
                 
-            if file:
-                original_filename = secure_filename(file.filename)
-                file_id = str(uuid.uuid4())
-                extension = os.path.splitext(original_filename)[1]
-                filename = f"{file_id}{extension}"
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                logger.info("Extracting topics from transcript")
+                topics = extract_topics(transcript_text) or []
                 
-                file.save(filepath)
+                logger.info("Extracting action items from transcript")
+                action_items_result = extract_action_items(transcript_text) or {"action_items": []}
+                action_items = action_items_result.get('action_items', [])
                 
-                title = request.form.get('title', original_filename)
-                topic = request.form.get('topic', '')
+                logger.info("Extracting Q&A from transcript")
+                qa_result = extract_questions_answers(transcript_text) or {"qa_pairs": []}
+                qa_pairs = qa_result.get('qa_pairs', [])
                 
+                logger.info("Extracting decisions from transcript")
+                decisions_result = extract_decisions(transcript_text) or {"decisions": []}
+                decisions = decisions_result.get('decisions', [])
+                
+                logger.info("Extracting commitments from transcript")
+                commitments_result = extract_commitments(transcript_text) or {"commitments": []}
+                commitments = commitments_result.get('commitments', [])
+                
+                # Step 3: Extract key visual moments
                 try:
-                    model = get_model()
-                    result = model.transcribe(filepath)
-                    transcript_text = result['text']
-
-                    # LLM analysis (only if available)
-                    summary = ""
-                    topics = []
-                    action_items = []
-                    if feature_is_available('llm'):
-                        summary = summarize_transcript(transcript_text) or "Failed to generate summary."
-                        topics = extract_topics(transcript_text) or []
-                        action_items_result = extract_action_items(transcript_text) or {"action_items": []}
-                        action_items = action_items_result.get('action_items', [])
-                        qa_result = extract_questions_answers(transcript_text) or {"qa_pairs": []}
-                        qa_pairs = qa_result.get('qa_pairs', [])
+                    logger.info("Extracting key visual moments from transcript")
+                    from modules.llm.meeting_intelligence import extract_key_visual_moments
+                    key_moments_result = extract_key_visual_moments(
+                        transcript_text, 
+                        result['segments'] if 'segments' in result else None,
+                        video_path
+                    )
+                    
+                    if key_moments_result.get('success', False):
+                        key_moments = key_moments_result.get('key_moments', [])
+                        logger.info(f"Extracted {len(key_moments)} key moments")
                         
-                        decisions_result = extract_decisions(transcript_text) or {"decisions": []}
-                        decisions = decisions_result.get('decisions', [])
-                        
-                        commitments_result = extract_commitments(transcript_text) or {"commitments": []}
-                        commitments = commitments_result.get('commitments', [])
-                    
-                    # Save transcript as JSON with metadata and LLM results
-                    transcript_data = {
-                        'id': file_id,
-                        'title': title,
-                        'topic': topic,
-                        'original_filename': original_filename,
-                        'date': datetime.now().isoformat(),
-                        'filepath': filepath,
-                        'transcript': transcript_text,
-                        'segments': result['segments'],
-                        'summary': summary,
-                        'topics': topics,
-                        'action_items': action_items,
-                        'qa_pairs': qa_pairs,
-                        'decisions': decisions,
-                        'commitments': commitments
-                    }
-                    
-                    transcript_path = os.path.join(app.config['TRANSCRIPT_FOLDER'], f"{file_id}.json")
-                    with open(transcript_path, 'w') as f:
-                        json.dump(transcript_data, f)
-                    
-                    results.append({
-                        'id': file_id,
-                        'title': title,
-                        'success': True
-                    })
-                    
+                        # Step 4: Extract screenshots for key moments
+                        if key_moments and os.path.exists(video_path):
+                            try:
+                                logger.info(f"Extracting screenshots for {len(key_moments)} key moments")
+                                
+                                # Extract timestamps
+                                timestamps = [moment.get('timestamp', 0) for moment in key_moments]
+                                
+                                # Extract screenshots
+                                from modules.video_processing import extract_screenshots_for_transcript
+                                screenshot_results = extract_screenshots_for_transcript(
+                                    file_id,
+                                    video_path,
+                                    timestamps,
+                                    screenshots_dir
+                                )
+                                
+                                # Update key moments with screenshot paths
+                                for i, result in enumerate(screenshot_results):
+                                    if i < len(key_moments):
+                                        # Convert the absolute path to a relative web path
+                                        static_dir = 'static'
+                                        if static_dir in result['screenshot_path']:
+                                            web_path = '/' + result['screenshot_path'].split(static_dir)[1]
+                                            web_path = '/' + static_dir + web_path
+                                        else:
+                                            web_path = result['screenshot_path']
+                                        
+                                        key_moments[i]['screenshot_path'] = web_path
+                                        logger.info(f"Screenshot for moment {i+1}: {web_path}")
+                            except Exception as e:
+                                logger.error(f"Error extracting screenshots: {str(e)}")
+                                traceback.print_exc()
+                    else:
+                        logger.warning(f"Key moments extraction failed: {key_moments_result.get('error', 'Unknown error')}")
                 except Exception as e:
-                    results.append({
-                        'filename': original_filename,
-                        'success': False,
-                        'error': str(e)
-                    })
-    else:
-        return jsonify({'error': 'No file or YouTube URL provided'}), 400
-    
-    return jsonify(results)
+                    logger.error(f"Error in key moments extraction: {str(e)}")
+                    traceback.print_exc()
+            except Exception as e:
+                logger.error(f"LLM analysis failed: {str(e)}")
+                traceback.print_exc()
+        
+        # Step 5: Save transcript as JSON with metadata and LLM results
+        try:
+            transcript_data = {
+                'id': file_id,
+                'title': title,
+                'topic': topic,
+                'original_filename': original_filename,
+                'date': datetime.now().isoformat(),
+                'filepath': video_path,
+                'transcript': transcript_text,
+                'segments': result['segments'] if 'segments' in result else [],
+                'summary': summary,
+                'topics': topics,
+                'action_items': action_items,
+                'qa_pairs': qa_pairs if 'qa_pairs' in locals() else [],
+                'decisions': decisions if 'decisions' in locals() else [],
+                'commitments': commitments if 'commitments' in locals() else [],
+                'key_moments': key_moments  # New: Add key moments with screenshots
+            }
+            
+            # Save JSON transcript file with robust error handling
+            transcript_path = os.path.join(transcripts_dir, f"{file_id}.json")
+            temp_path = os.path.join(transcripts_dir, f"{file_id}_temp.json")
+            
+            try:
+                # First write to a temporary file
+                with open(temp_path, 'w') as f:
+                    json.dump(transcript_data, f, indent=2)
+                
+                # If successful, rename to final path
+                os.replace(temp_path, transcript_path)
+                logger.info(f"Successfully saved transcript to {transcript_path}")
+            except Exception as e:
+                logger.error(f"Error saving transcript to {transcript_path}: {str(e)}")
+                
+                # Try an alternate approach
+                try:
+                    # Direct write to final path
+                    with open(transcript_path, 'w') as f:
+                        json.dump(transcript_data, f, indent=2)
+                    logger.info(f"Saved transcript to {transcript_path} (direct write)")
+                except Exception as e2:
+                    logger.error(f"Fatal error saving transcript: {str(e2)}")
+                    
+                    # Save to a fallback location if all else fails
+                    fallback_path = os.path.join(os.path.dirname(transcripts_dir), f"{file_id}_fallback.json")
+                    with open(fallback_path, 'w') as f:
+                        json.dump(transcript_data, f, indent=2)
+                    logger.info(f"Saved transcript to fallback path: {fallback_path}")
+        except Exception as e:
+            logger.error(f"Error preparing transcript data: {str(e)}")
+            traceback.print_exc()
+            return jsonify({'error': f'Failed to save transcript: {str(e)}'}), 500
+        
+        # Return success response with the transcript ID
+        return jsonify([{
+            'id': file_id,
+            'title': title,
+            'success': True
+        }])
+            
+    except Exception as e:
+        logger.error(f"Unhandled exception in transcribe endpoint: {str(e)}")
+        traceback.print_exc()
+        return jsonify({'error': f'An unexpected error occurred: {str(e)}'}), 500
 
 @app.route('/transcript/<transcript_id>')
 def view_transcript(transcript_id):
@@ -1282,6 +1195,65 @@ def view_transcript(transcript_id):
     
     with open(transcript_path, 'r') as f:
         transcript_data = json.load(f)
+    
+    # DEBUG: Print transcript info and available keys
+    print(f"Viewing transcript: {transcript_id}")
+    print(f"Available keys in transcript data: {list(transcript_data.keys())}")
+    
+    # DEBUG: Print key moments info if available
+    if 'key_moments' in transcript_data:
+        print(f"Transcript has {len(transcript_data['key_moments'])} key moments")
+        for i, moment in enumerate(transcript_data['key_moments']):
+            print(f"Moment {i+1}: {moment.get('title', 'Untitled')} - {moment.get('timestamp')}")
+            print(f"Has screenshot: {'screenshot_path' in moment}")
+            if 'screenshot_path' in moment:
+                print(f"Screenshot path: {moment['screenshot_path']}")
+    else:
+        print("No key_moments found in transcript data")
+        # Create fallback key moments from screenshots folder
+        screenshots_dir = os.path.join(app.config['UPLOAD_FOLDER'], f"screenshots_{transcript_id}")
+        if os.path.exists(screenshots_dir):
+            print(f"Found screenshots directory: {screenshots_dir}")
+            screenshot_files = [f for f in os.listdir(screenshots_dir) if f.endswith('.jpg') or f.endswith('.png')]
+            print(f"Found {len(screenshot_files)} screenshot files")
+            
+            if screenshot_files:
+                # Create fallback key moments
+                key_moments = []
+                for i, filename in enumerate(screenshot_files):
+                    # Extract timestamp from filename (format: transcript_id_screenshot_index_timestamp.jpg)
+                    parts = filename.split('_')
+                    if len(parts) >= 4:
+                        try:
+                            timestamp = float(parts[-1].replace('s.jpg', '').replace('s.png', ''))
+                            
+                            # Find closest segment to this timestamp
+                            closest_segment = min(transcript_data['segments'], key=lambda s: abs(s.get('start', 0) - timestamp))
+                            
+                            moment = {
+                                "timestamp": timestamp,
+                                "title": f"Key Visual Moment {i+1}",
+                                "description": f"Screenshot captured at {timestamp}s",
+                                "transcript_text": closest_segment.get('text', ''),
+                                "screenshot_path": f"/static/uploads/screenshots_{transcript_id}/{filename}"
+                            }
+                            key_moments.append(moment)
+                            print(f"Created fallback moment: {moment['title']} at {timestamp}s")
+                        except (ValueError, IndexError) as e:
+                            print(f"Error parsing filename {filename}: {e}")
+                
+                transcript_data['key_moments'] = key_moments
+                print(f"Added {len(key_moments)} fallback key moments to transcript data")
+    
+    # Ensure all expected structures exist to prevent attribute errors
+    for field in ['action_items', 'qa_pairs', 'topics', 'decisions', 'commitments', 'key_moments']:
+        if field not in transcript_data or transcript_data[field] is None:
+            transcript_data[field] = []
+            print(f"Initialize empty {field} list")
+        elif isinstance(transcript_data[field], dict) and field in transcript_data[field]:
+            # If it's a dict with matching key, extract the list
+            transcript_data[field] = transcript_data[field].get(field, [])
+            print(f"Extracted {field} list from dict")
     
     return render_template('transcript.html', transcript=transcript_data)
 
@@ -1519,6 +1491,8 @@ def save_topics(transcript_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5050)
+    app.run(debug=True, host='0.0.0.0', port=5050)
 
