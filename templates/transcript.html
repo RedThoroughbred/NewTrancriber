@@ -396,41 +396,40 @@ display: none;
                 <div class="lg:col-span-4 lg:order-2 order-1">
                     <div class="space-y-5">
                         <!-- Tab navigation for sidebar tools -->
-                        <div class="bg-white rounded-xl overflow-hidden shadow-lg">
-                            <div class="flex border-b border-gray-200">
-                                <button id="tab-summary" onclick="switchTab('summary')" class="flex-1 py-3 px-4 text-blue-700 border-b-2 border-blue-500 font-medium text-sm">
-                                    <span class="flex items-center justify-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                        Summary
-                                    </span>
-                                </button>
-                                <button id="tab-topics" onclick="switchTab('topics')" class="flex-1 py-3 px-4 text-gray-400 border-b-2 border-transparent hover:text-gray-300 font-medium text-sm">
-                                    <span class="flex items-center justify-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                                        </svg>
-                                        Topics
-                                    </span>
-                                </button>
-                                <button id="tab-insights" onclick="switchTab('insights')" class="flex-1 py-3 px-4 text-gray-400 border-b-2 border-transparent hover:text-gray-300 font-medium text-sm">
-                                    <span class="flex items-center justify-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        Meeting Insights
-                                    </span>
-                                </button>
-                                <button id="tab-key-moments" onclick="switchTab('key-moments')" class="flex-1 py-3 px-4 text-gray-400 border-b-2 border-transparent hover:text-gray-300 font-medium text-sm">
-                                    <span class="flex items-center justify-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        Key Moments
-                                    </span>
-                                </button>
-                            </div>
+                        <div class="flex border-b border-gray-200">
+                            <button id="tab-summary" onclick="switchTab('summary')" class="flex-1 py-3 px-2 text-blue-700 border-b-2 border-blue-500 font-medium text-xs sm:text-sm">
+                                <span class="flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <span class="whitespace-nowrap">Summary</span>
+                                </span>
+                            </button>
+                            <button id="tab-topics" onclick="switchTab('topics')" class="flex-1 py-3 px-2 text-gray-400 border-b-2 border-transparent hover:text-gray-300 font-medium text-xs sm:text-sm">
+                                <span class="flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                    </svg>
+                                    <span class="whitespace-nowrap">Topics</span>
+                                </span>
+                            </button>
+                            <button id="tab-insights" onclick="switchTab('insights')" class="flex-1 py-3 px-2 text-gray-400 border-b-2 border-transparent hover:text-gray-300 font-medium text-xs sm:text-sm">
+                                <span class="flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span class="whitespace-nowrap">Insights</span>
+                                </span>
+                            </button>
+                            <button id="tab-key-moments" onclick="switchTab('key-moments')" class="flex-1 py-3 px-2 text-gray-400 border-b-2 border-transparent hover:text-gray-300 font-medium text-xs sm:text-sm">
+                                <span class="flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <span class="whitespace-nowrap">Moments</span>
+                                </span>
+                            </button>
+                        </div>
 
                             <!-- Summary Panel -->
                             <div id="panel-summary" class="p-5">
@@ -776,7 +775,7 @@ display: none;
                         </div>
 
                         <!-- Search panel -->
-                        <div class="bg-white rounded-xl p-5 shadow-lg">
+                        <div class="bg-white rounded-xl p-5 shadow-lg mb-5">
                             <h3 class="text-lg font-medium mb-4 text-blue-700">Search Transcript</h3>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -1491,48 +1490,150 @@ display: none;
     }
 
     // Function to jump to a specific timestamp in the transcript
-    function jumpToTimestamp(timestamp) {
-        // Convert timestamp to seconds if it's in format MM:SS or HH:MM:SS
-        let seconds = 0;
-        if (typeof timestamp === 'string' && timestamp.includes(':')) {
-            const parts = timestamp.split(':');
-            if (parts.length === 3) { // HH:MM:SS
-                seconds = parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseFloat(parts[2]);
-            } else if (parts.length === 2) { // MM:SS
-                seconds = parseInt(parts[0]) * 60 + parseFloat(parts[1]);
-            }
-        } else {
-            seconds = parseFloat(timestamp);
+    // Enhanced jumpToTimestamp function that preserves the current tab
+// while still scrolling to the transcript segment
+function jumpToTimestamp(timestamp) {
+    // Store the current active tab before jumping
+    const currentActiveTab = document.querySelector('.flex.border-b.border-gray-200 button.border-primary-500, .flex.border-b.border-gray-200 button.border-blue-500');
+    const currentTabId = currentActiveTab ? currentActiveTab.id : null;
+    
+    // Convert timestamp to seconds if it's in format MM:SS or HH:MM:SS
+    let seconds = 0;
+    if (typeof timestamp === 'string' && timestamp.includes(':')) {
+        const parts = timestamp.split(':');
+        if (parts.length === 3) { // HH:MM:SS
+            seconds = parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseFloat(parts[2]);
+        } else if (parts.length === 2) { // MM:SS
+            seconds = parseInt(parts[0]) * 60 + parseFloat(parts[1]);
         }
-
-        // Find the segment closest to this timestamp
-        const segmentIndex = findSegmentByTimestamp(seconds);
-
-        // Jump to the segment
-        if (segmentIndex >= 0) {
-            // Switch to transcript tab first if needed
-            const transcriptTab = document.querySelector('#tab-summary');
-            if (transcriptTab && transcriptTab.classList.contains('text-primary-300')) {
-                // We're already on a good tab, no need to switch
-            } else {
-                // Switch to summary tab first to ensure the UI is in a good state
-                switchTab('summary');
-            }
-
-            // Wait a bit then jump to segment
-            setTimeout(() => {
-                jumpToSegment(segmentIndex);
-                // Highlight the segment briefly
-                const segment = document.getElementById('segment-' + segmentIndex);
-                if (segment) {
-                    segment.classList.add('bg-blue-100');
-                    setTimeout(() => {
-                        segment.classList.remove('bg-blue-100');
-                    }, 2000);
-                }
-            }, 100);
-        }
+    } else {
+        seconds = parseFloat(timestamp);
     }
+
+    // Find the segment closest to this timestamp
+    const segmentIndex = findSegmentByTimestamp(seconds);
+
+    // Jump to the segment
+    if (segmentIndex >= 0) {
+        // Process the jump without switching tabs
+        setTimeout(() => {
+            // This handles updating the timeline and current time
+            updateTimelineAndCurrentTime(segmentIndex);
+            
+            // Highlight the segment in the transcript
+            highlightTranscriptSegment(segmentIndex);
+            
+            // Explicitly scroll the transcript into view, even if we're on a different tab
+            scrollToTranscriptSegment(segmentIndex);
+            
+            // Make sure we're still on the key-moments tab if that's where we started
+            if (currentTabId && currentTabId === 'tab-key-moments') {
+                switchTab('key-moments');
+            }
+        }, 100);
+    }
+}
+
+// Helper function to update the timeline and current time
+function updateTimelineAndCurrentTime(segmentIndex) {
+    if (!segments || segments.length === 0 || segmentIndex < 0 || segmentIndex >= segments.length) return;
+    
+    const segment = segments[segmentIndex];
+    
+    // Update the current time display
+    const currentTimeElement = document.getElementById('current-time');
+    if (currentTimeElement && segment.start !== undefined) {
+        currentTimeElement.textContent = formatTime(segment.start);
+    }
+    
+    // Update the timeline progress bar
+    const timelineProgress = document.getElementById('timeline-progress');
+    if (timelineProgress && segment.start !== undefined && totalDuration > 0) {
+        const progressWidth = (segment.start / totalDuration * 100);
+        timelineProgress.style.width = progressWidth + '%';
+    }
+    
+    // Update active segment in timeline
+    const timelineSegments = document.querySelectorAll('.timeline-segment');
+    timelineSegments.forEach(el => el.classList.remove('active'));
+    if (timelineSegments.length > segmentIndex) {
+        timelineSegments[segmentIndex].classList.add('active');
+    }
+}
+
+// Helper function to highlight the transcript segment
+function highlightTranscriptSegment(segmentIndex) {
+    // Clear previous highlighting
+    document.querySelectorAll('.segment').forEach(segment => {
+        segment.classList.remove('bg-gray-100', 'bg-blue-100');
+    });
+    
+    // Highlight the new segment
+    const segmentElement = document.getElementById('segment-' + segmentIndex);
+    if (segmentElement) {
+        segmentElement.classList.add('bg-blue-100');
+        setTimeout(() => {
+            segmentElement.classList.remove('bg-blue-100');
+            segmentElement.classList.add('bg-gray-100');
+        }, 2000);
+    }
+}
+
+// Helper function to scroll to the transcript segment
+// Improved function to scroll to the transcript segment
+// Final optimized function to scroll to the transcript segment
+function scrollToTranscriptSegment(segmentIndex) {
+    // Find the segment that corresponds to the timestamp
+    const segmentElement = document.getElementById('segment-' + segmentIndex);
+    if (!segmentElement) {
+        console.error(`Segment element not found: #segment-${segmentIndex}`);
+        return;
+    }
+    
+    // First make sure the transcript section is visible
+    const transcriptSection = document.querySelector('.lg\\:col-span-8');
+    if (transcriptSection) {
+        // Scroll the whole page to show the transcript section
+        transcriptSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+        // Then scroll the transcript content container with a delay to ensure page is ready
+        setTimeout(() => {
+            const transcriptContent = document.getElementById('transcript-content');
+            if (transcriptContent) {
+                // Get the current segment position
+                const segmentTop = segmentElement.offsetTop;
+                
+                // Increased offset to show more previous segments
+                // From testing, we need about 450px to show all desired context
+                const contextOffset = 450; 
+                
+                // Calculate final scroll position with context
+                const scrollPosition = Math.max(0, segmentTop - contextOffset);
+                
+                // Log for debugging
+                console.log(`Scrolling to segment ${segmentIndex}:`, {
+                    segmentTop,
+                    contextOffset,
+                    scrollPosition
+                });
+                
+                // Scroll the transcript content
+                transcriptContent.scrollTop = scrollPosition;
+                
+                // Add a visual indicator by temporarily adding a highlight
+                segmentElement.classList.add('bg-blue-100');
+                setTimeout(() => {
+                    segmentElement.classList.remove('bg-blue-100');
+                    segmentElement.classList.add('bg-gray-100');
+                }, 2000);
+            } else {
+                console.error("Transcript content container not found");
+            }
+        }, 600); // Even longer delay to ensure main scroll completes
+    } else {
+        console.error("Transcript section not found");
+    }
+}
 
     // Function to copy text to clipboard
     function copyText(text) {
