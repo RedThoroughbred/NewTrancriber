@@ -188,6 +188,11 @@ def update_transcript(transcript_id):
 def dashboard():
     # Get list of transcripts
     transcripts = []
+    total_duration_seconds = 0
+    recent_transcript_count = 0
+    now = datetime.now()
+    week_ago = now.replace(day=now.day-7)
+    
     for file in os.listdir(app.config['TRANSCRIPT_FOLDER']):
         if file.endswith('.json') and not file.startswith('comparison_'):
             try:
@@ -198,12 +203,56 @@ def dashboard():
                     if 'transcript' in data:
                         # Add a preview of the transcript (first 200 characters)
                         data['preview'] = data['transcript'][:200] + "..." if len(data['transcript']) > 200 else data['transcript']
+                        
+                        # Calculate duration for this transcript
+                        duration_seconds = 0
+                        if 'segments' in data and data['segments'] and len(data['segments']) > 0:
+                            try:
+                                # Get the end time of the last segment
+                                last_segment = data['segments'][-1]
+                                if isinstance(last_segment, dict) and 'end' in last_segment:
+                                    duration_seconds = float(last_segment['end'])
+                                elif hasattr(last_segment, 'end'):
+                                    duration_seconds = float(last_segment.end)
+                            except (TypeError, ValueError, IndexError, KeyError) as e:
+                                print(f"Error calculating duration for {file}: {str(e)}")
+                                # Try to estimate from segment count
+                                if 'segments' in data and data['segments']:
+                                    duration_seconds = len(data['segments']) * 5  # rough estimate of 5 seconds per segment
+                        
+                        # Add duration to the transcript data
+                        data['duration_seconds'] = duration_seconds
+                        
+                        # Add to total duration
+                        total_duration_seconds += duration_seconds
+                        
+                        # Count recent transcripts (within last week)
+                        if 'date' in data and data['date']:
+                            try:
+                                transcript_date = datetime.fromisoformat(data['date'].split('+')[0])
+                                if transcript_date > week_ago:
+                                    recent_transcript_count += 1
+                            except (ValueError, TypeError):
+                                pass  # Skip if date can't be parsed
+                        
                         transcripts.append(data)
             except Exception as e:
                 print(f"Error loading transcript {file}: {e}")
                 continue
     
-    return render_template('dashboard.html', transcripts=transcripts)
+    # Calculate metrics
+    total_hours = total_duration_seconds / 3600
+    avg_minutes = (total_hours * 60 / len(transcripts)) if transcripts else 0
+    
+    # Pass everything to the template
+    return render_template(
+        'dashboard.html', 
+        transcripts=transcripts,
+        total_hours=total_hours,
+        avg_minutes=avg_minutes,
+        recent_transcript_count=recent_transcript_count,
+        now=now
+    )
 
 @app.route('/search', methods=['POST'])
 def search_transcripts():
@@ -1004,6 +1053,29 @@ def download_comparison():
         download_name="transcript_comparison.pdf"
     )
 
+def calculate_key_moments_count(video_duration_seconds):
+    """
+    Calculate the appropriate number of key moments based on video duration.
+    
+    Args:
+        video_duration_seconds: Video duration in seconds
+        
+    Returns:
+        Appropriate number of key moments for the video length
+    """
+    # Convert to minutes
+    duration_minutes = video_duration_seconds / 60
+    
+    # Base formula: 5 moments for short videos, then add 1 moment per 10 minutes
+    # with a maximum of 20 moments for very long videos
+    count = 5 + int(duration_minutes / 10)
+    
+    # Apply reasonable limits
+    return max(5, min(count, 20))
+
+
+
+
 @app.route('/transcribe', methods=['POST'])
 def transcribe():
     """
@@ -1208,17 +1280,29 @@ def transcribe():
                 
                 # Step 3: Extract key visual moments
                 try:
-                    logger.info("Extracting key visual moments from transcript")
-                    from modules.llm.meeting_intelligence import extract_key_visual_moments
-                    key_moments_result = extract_key_visual_moments(
-                        transcript_text, 
-                        result['segments'] if 'segments' in result else None,
-                        video_path
+                    logger.info("Extracting smart key moments from transcript")
+                    from modules.llm.meeting_intelligence import extract_smart_key_moments  # Import the new function
+                    video_duration = 0
+                    if converted_segments and len(converted_segments) > 0:
+                        video_duration = converted_segments[-1].get("end", 0)
+
+                    # Calculate appropriate number of key moments
+                    key_moments_count = calculate_key_moments_count(video_duration)
+                    logger.info(f"Calculated {key_moments_count} key moments for {video_duration/60:.2f} minute video")
+
+                    key_moments_result = extract_smart_key_moments(
+                        transcript_text,
+                        converted_segments,
+                        video_path,
+                        dynamic_count=True,  # Enable dynamic counting instead of fixed count
+                        min_count=5,         # Minimum number of key moments
+                        max_count=20,        # Maximum number of key moments
+                        context_window=5     # Context window size
                     )
                     
                     if key_moments_result.get('success', False):
                         key_moments = key_moments_result.get('key_moments', [])
-                        logger.info(f"Extracted {len(key_moments)} key moments")
+                        logger.info(f"Extracted {len(key_moments)} smart key moments")
                         
                         # Step 4: Extract screenshots for key moments
                         if key_moments and os.path.exists(video_path):
@@ -1599,6 +1683,7 @@ def debug_transcript(transcript_id):
         import traceback
         traceback.print_exc()
         return f"Error loading transcript: {str(e)}", 500
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

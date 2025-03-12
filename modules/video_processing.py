@@ -96,8 +96,18 @@ def enhance_image_for_readability(frame, is_ui_screenshot=True):
             mask = dilated_edges.astype(np.float32) / 255.0
             mask = cv2.cvtColor(mask.astype(np.float32), cv2.COLOR_GRAY2BGR)
             
-            # Enhance contrast in text areas
-            enhanced = cv2.addWeighted(enhanced, 1.2, enhanced * mask, 0.3, 0)
+            # Enhance contrast in text areas - with proper type handling
+            try:
+                # Convert to float32 for consistent mathematical operations
+                enhanced_float = enhanced.astype(np.float32)
+                # Create the weighted overlay with proper type handling
+                enhanced_overlay = cv2.multiply(enhanced_float, mask)
+                # Combine using addWeighted with explicit types
+                combined = cv2.addWeighted(enhanced_float, 1.2, enhanced_overlay, 0.3, 0)
+                # Convert back to uint8 for display/storage
+                enhanced = np.clip(combined, 0, 255).astype(np.uint8)
+            except Exception as e:
+                logger.warning(f"Image enhancement step failed: {str(e)}")
 
         # 3. Apply adaptive color correction
         lab = cv2.cvtColor(enhanced, cv2.COLOR_BGR2LAB)

@@ -632,12 +632,30 @@ Key Visual Moments extraction - IMPROVED VERSION
 """
 
 KEY_MOMENTS_SYSTEM_PROMPT = """
-You are an expert at analyzing meeting transcripts and identifying key moments where a screenshot would be valuable.
-Look for moments where:
-1. Someone is demonstrating or showing something
-2. A speaker references visual content ("as you can see here...")
-3. Someone is presenting slides or other visual media
-4. Important visuals are being discussed
+You are an expert at analyzing meeting transcripts and identifying the MOST SIGNIFICANT moments that would be valuable to capture as screenshots.
+
+LOOK FOR THESE TYPES OF KEY MOMENTS (in priority order):
+1. VISUAL REFERENCES - When someone is explicitly showing or demonstrating something:
+   - "As you can see on this slide..."
+   - "Let me show you this diagram..."
+   - "If you look at the screen..."
+
+2. SIGNIFICANT CONTENT MOMENTS:
+   - Decision points: When important decisions are made or finalized
+   - Problem statements: Clear articulation of key challenges
+   - Solution proposals: Detailed explanations of solutions
+   - Action items: When specific tasks are assigned
+   - Quantitative insights: When numbers, metrics, or data are discussed
+   - Technical demonstrations: Explanations of how something works
+
+3. STRUCTURAL ELEMENTS:
+   - Meeting opening: Introduction, agenda setting
+   - Topic transitions: Clear shifts to new important topics
+   - Summarization points: "To recap what we've covered..."
+   - Meeting conclusion: Final thoughts, next steps
+
+YOUR TASK:
+Identify the exact moments in the transcript where screenshots would provide maximum value for someone reviewing the meeting later.
 
 YOU MUST RESPOND ONLY WITH JSON. DO NOT explain your reasoning or add any text that is not part of the JSON.
 Return EXACTLY this JSON structure and nothing else:
@@ -646,24 +664,197 @@ Return EXACTLY this JSON structure and nothing else:
     {
       "timestamp": 123.5,
       "title": "Brief title for this moment",
-      "description": "Short description of why this visual moment is important"
-    },
-    {
-      "timestamp": 456.7,
-      "title": "Another key moment",
-      "description": "Description of this moment"
+      "description": "Short description of why this moment is valuable",
+      "moment_type": "visual_reference|decision|problem|solution|action_item|technical|summary"
     }
   ]
 }
 
-Limit to 5-10 most important visual moments. If no clear visual moments exist, return {"key_moments": []}.
+The first timestamp should be very early in the video (introduction).
+The last timestamp should be very late in the video (conclusion).
+The middle timestamps should be the most significant moments based on the criteria above.
 """
+
+def calculate_adaptive_context_window(video_duration_seconds: float) -> int:
+    """
+    Calculate an appropriate context window size based on video duration.
+    
+    Args:
+        video_duration_seconds: Video duration in seconds
+        
+    Returns:
+        Context window size (number of segments)
+    """
+    # Convert to minutes
+    duration_minutes = video_duration_seconds / 60
+    
+    # Base context window of 5 segments
+    # Add 1 segment for every 10 minutes of content
+    # Cap at 15 segments maximum
+    context_size = 5 + int(duration_minutes / 10)
+    return max(5, min(context_size, 15))
+
+def detect_natural_content_breaks(segments: List[Dict[str, Any]], min_segments_between: int = 10) -> List[Dict[str, Any]]:
+    """
+    Detect natural breaks in transcript content that might indicate significant moments.
+    
+    Args:
+        segments: List of transcript segments
+        min_segments_between: Minimum segments between detected breaks
+        
+    Returns:
+        List of dicts with timestamp and reason for the break
+    """
+    if not segments or len(segments) < min_segments_between*2:
+        return []
+    
+    content_breaks = []
+    last_break_idx = -min_segments_between  # Allow first segment to be a break
+    
+    # Signals that often indicate topic transitions or important moments
+    transition_phrases = [
+        "moving on to", "let's talk about", "next item", "next topic",
+        "to summarize", "in conclusion", "let me show you", 
+        "as you can see", "now we'll", "turning to", "let's discuss",
+        "i'd like to", "the next point", "another important",
+        "to wrap up", "we need to decide", "the key question"
+    ]
+    
+    # Track the rolling density of technical or quantitative terms
+    technical_term_count = [0] * len(segments)
+    quantitative_term_regex = r'\b\d+(?:\.\d+)?%?\b|\bdollars?\b|\beuro\b|\bpercent(?:age)?\b|\bratio\b|\bmetrics?\b|\bKPI\b'
+    
+    # Process segments for technical/quantitative term density
+    for i, segment in enumerate(segments):
+        text = segment.get("text", "").lower()
+        
+        # Count quantitative terms
+        import re
+        quant_terms = len(re.findall(quantitative_term_regex, text))
+        
+        # Calculate rolling sum (last 3 segments)
+        window_start = max(0, i-2)
+        technical_term_count[i] = sum(technical_term_count[window_start:i]) + quant_terms
+    
+    # Now detect breaks based on multiple signals
+    for i, segment in enumerate(segments):
+        # Skip if too close to last break
+        if i - last_break_idx < min_segments_between:
+            continue
+        
+        text = segment.get("text", "").lower()
+        is_break = False
+        break_reason = ""
+        
+        # Check for transition phrases
+        for phrase in transition_phrases:
+            if phrase in text:
+                is_break = True
+                break_reason = f"Transition phrase: '{phrase}'"
+                break
+        
+        # Check for spike in technical/quantitative terms (if 3x average)
+        if not is_break and i > 2:
+            avg_terms = sum(technical_term_count[max(0, i-10):i]) / min(10, i)
+            if technical_term_count[i] > avg_terms * 3 and technical_term_count[i] >= 3:
+                is_break = True
+                break_reason = "High density of quantitative/technical terms"
+        
+        # Check for long pause between segments (indicating potential topic change)
+        if not is_break and i > 0:
+            current_start = segment.get("start", 0)
+            prev_end = segments[i-1].get("end", 0)
+            pause_duration = current_start - prev_end
+            
+            # If pause is more than 2 seconds (and not just a sentence pause)
+            if pause_duration > 2.0:
+                is_break = True
+                break_reason = f"Natural pause of {pause_duration:.1f} seconds"
+        
+        # If we detected a break, add it
+        if is_break:
+            content_breaks.append({
+                "timestamp": segment.get("start", 0),
+                "segment_idx": i,
+                "reason": break_reason,
+                "text": text[:50] + "..." if len(text) > 50 else text
+            })
+            last_break_idx = i
+    
+    return content_breaks
+
+def extract_semantic_context(segments: List[Dict[str, Any]], 
+                            center_idx: int, 
+                            base_window_size: int) -> tuple:
+    """
+    Extract context using semantic boundaries rather than fixed window size.
+    
+    Args:
+        segments: List of transcript segments
+        center_idx: Index of the central segment
+        base_window_size: Base number of segments to include
+        
+    Returns:
+        Tuple of (start_idx, end_idx, context_text)
+    """
+    if not segments or center_idx < 0 or center_idx >= len(segments):
+        return center_idx, center_idx, ""
+    
+    # Start with the base window approach
+    start_idx = max(0, center_idx - base_window_size)
+    end_idx = min(len(segments) - 1, center_idx + base_window_size)
+    
+    # Get the segments in this range
+    window_segments = segments[start_idx:end_idx+1]
+    
+    # Join all text in the current window
+    initial_text = " ".join([s.get("text", "") for s in window_segments])
+    
+    # Look for better start boundary - complete sentences
+    sentence_endings = ['.', '!', '?']
+    if start_idx > 0:
+        # Look at the text of the first segment in our window
+        first_segment_text = window_segments[0].get("text", "")
+        
+        # If it starts with lowercase letter and there is a previous segment,
+        # it might be in the middle of a thought - expand backward
+        if first_segment_text and first_segment_text[0].islower():
+            # Try to include the previous segment
+            new_start_idx = max(0, start_idx - 1)
+            if new_start_idx < start_idx:
+                prev_segment = segments[new_start_idx]
+                prev_text = prev_segment.get("text", "")
+                
+                # Check if the previous segment ends with a sentence-ending punctuation
+                if prev_text and prev_text[-1] not in sentence_endings:
+                    # It doesn't end with a sentence boundary, so include it
+                    start_idx = new_start_idx
+    
+    # Look for better end boundary - complete sentences  
+    if end_idx < len(segments) - 1:
+        # Look at the text of the last segment in our window
+        last_segment_text = window_segments[-1].get("text", "")
+        
+        # If it doesn't end with a sentence-ending punctuation, 
+        # it might be in the middle of a thought - expand forward
+        if last_segment_text and last_segment_text[-1] not in sentence_endings:
+            # Try to include the next segment
+            new_end_idx = min(len(segments) - 1, end_idx + 1) 
+            if new_end_idx > end_idx:
+                next_segment = segments[new_end_idx]
+                next_text = next_segment.get("text", "")
+                end_idx = new_end_idx
+    
+    # Join the text from the adjusted range
+    context_text = " ".join([s.get("text", "") for s in segments[start_idx:end_idx+1]])
+    
+    return start_idx, end_idx, context_text
 
 def extract_key_visual_moments(
     transcript_text: str,
     segments: Optional[List[Dict[str, Any]]] = None,
     video_path: Optional[str] = None,
-    max_moments: int = 5,
+    max_moments: int = 7, #changed from 5 to 7
     context_window: int = 5
 ) -> Dict[str, Any]:
     """
@@ -765,6 +956,439 @@ def extract_key_visual_moments(
             "error": str(e)
         }
 
+def extract_smart_key_moments(
+    transcript_text: str,
+    segments: List[Dict[str, Any]],
+    video_path: Optional[str] = None,
+    fixed_count: int = None,
+    dynamic_count: bool = False,
+    min_count: int = 5,
+    max_count: int = 20,
+    context_window: int = 5,
+    title_format: str = "numbered"  # Added parameter with default value
+) -> Dict[str, Any]:
+    """
+    Extract key moments intelligently, with either a fixed count or dynamically based on video length.
+    
+    Args:
+        transcript_text: The transcript text
+        segments: List of transcript segments with timestamps
+        video_path: Path to the video file (optional)
+        fixed_count: If provided, always use this many key moments (legacy parameter)
+        dynamic_count: If True, calculate key moment count based on video length
+        min_count: Minimum number of key moments when using dynamic_count
+        max_count: Maximum number of key moments when using dynamic_count
+        context_window: Number of segments to include before and after for context
+        title_format: Format for titles - "numbered" or "content"
+        
+    Returns:
+        Dictionary with key_moments list and metadata
+    """
+    logger.info("Extracting smart key moments")
+    
+    # Calculate video duration
+    total_duration = segments[-1].get("end", 0) if segments and len(segments) > 0 else 1800
+    duration_minutes = total_duration / 60
+    
+    # Determine how many key moments to extract
+    if dynamic_count:
+        # Base formula: minimum + 1 moment per 10 minutes of content
+        moment_count = min_count + int(duration_minutes / 10)
+        # Apply maximum limit
+        moment_count = min(moment_count, max_count)
+        logger.info(f"Using dynamic count: {moment_count} moments for {duration_minutes:.1f} minute video")
+    else:
+        # Use legacy fixed count approach
+        moment_count = fixed_count if fixed_count is not None else 7
+        logger.info(f"Using fixed count: {moment_count} moments")
+    
+    # Generate standard titles framework
+    standard_titles = ["Introduction"]
+    for i in range(1, moment_count-1):
+        standard_titles.append(f"Key point {i}")
+    standard_titles.append("Conclusion")
+    
+    try:
+        # Only attempt content analysis if LLM is available
+        if is_available():
+            # Try to find content-meaningful timestamps
+            interesting_timestamps = []
+            
+            # 1. First look for explicit visual cues
+            visual_cues = find_visual_cues_in_transcript(transcript_text)
+            if visual_cues:
+                for cue in visual_cues:
+                    timestamp_str = cue.get('timestamp')
+                    if timestamp_str:
+                        try:
+                            # Convert MM:SS to seconds
+                            parts = timestamp_str.split(':')
+                            if len(parts) == 2:
+                                timestamp = int(parts[0]) * 60 + int(parts[1])
+                                if 0 <= timestamp <= total_duration:
+                                    interesting_timestamps.append({
+                                        'timestamp': timestamp,
+                                        'reason': f"Visual reference: {cue.get('visual_cue')}"
+                                    })
+                        except:
+                            pass
+
+            # If we don't have enough timestamps from visual cues, try content breaks
+            if len(interesting_timestamps) < moment_count:
+                content_breaks = detect_natural_content_breaks(segments)
+                
+                # Add these as potential timestamps
+                for break_info in content_breaks:
+                    timestamp = break_info.get('timestamp', 0)
+                    # Skip if too close to existing timestamps
+                    if not any(abs(ts.get('timestamp', 0) - timestamp) < 10 for ts in interesting_timestamps):
+                        user_friendly_reason = "Key content point"
+                        if "transition phrase" in break_info.get('reason', '').lower():
+                            user_friendly_reason = "Topic transition"
+                        elif "pause" in break_info.get('reason', '').lower():
+                            user_friendly_reason = "Discussion point"
+                        elif "technical terms" in break_info.get('reason', '').lower():
+                            user_friendly_reason = "Technical details"
+
+                        interesting_timestamps.append({
+                            'timestamp': timestamp,
+                            'reason': break_info.get('reason', 'Natural content break'),
+                            'title': "Key point",  # Removed numbering - will add proper numbering later
+                            'description': user_friendly_reason
+                        })          
+            
+            # If we don't have enough timestamps from regex, use LLM
+            if len(interesting_timestamps) < moment_count:
+                truncated_text = _truncate_text(transcript_text, max_length=8000)
+                
+                # Include duration information
+                prompt = f'''
+                This video is {duration_minutes:.2f} minutes long and requires EXACTLY {moment_count} key moments.
+
+                ANALYZE THIS TRANSCRIPT TO FIND:
+                1. An INTRODUCTION moment within the first 5% of the video ({total_duration * 0.05:.0f} seconds)
+                2. A CONCLUSION moment within the last 5% of the video (after {total_duration * 0.95:.0f} seconds)
+                3. {moment_count-2} intermediate moments representing the MOST SIGNIFICANT points in the discussion
+
+                PRIORITIZE THESE MOMENT TYPES (from most to least important):
+                - Visual demonstrations ("Let me show you...", "On the screen...", "Here you can see...")
+                - Decision points (where key decisions are made)
+                - Problem statements (clear articulation of challenges)
+                - Solution explanations
+                - Quantitative insights (important numbers/metrics)
+                - Technical demonstrations
+                - Action item assignments
+                - Topic transitions and summary points
+
+                TRANSCRIPT:
+                {truncated_text}
+
+                For each moment, provide a timestamp (in seconds) between 0 and {total_duration}.
+                '''
+                
+                # Get content-meaningful timestamps
+                client = get_client()
+                response = client.generate(
+                    prompt=prompt,
+                    system=KEY_MOMENTS_SYSTEM_PROMPT,
+                    max_tokens=1500
+                )
+                
+                llm_result = safe_json_loads(response, {"key_moments": []})
+                if isinstance(llm_result, dict) and "key_moments" in llm_result:
+                    for moment in llm_result["key_moments"]:
+                        timestamp = moment.get("timestamp", 0)
+                        # Convert string timestamp to seconds if needed
+                        if isinstance(timestamp, str) and ":" in timestamp:
+                            parts = timestamp.split(":")
+                            if len(parts) == 2:  # MM:SS format
+                                timestamp = int(parts[0]) * 60 + float(parts[1])
+                            elif len(parts) == 3:  # HH:MM:SS format
+                                timestamp = int(parts[0]) * 3600 + int(parts[1]) * 60 + float(parts[2])
+                        
+                        # Validate timestamp
+                        if 0 <= timestamp <= total_duration:
+                            interesting_timestamps.append({
+                                'timestamp': timestamp,
+                                'title': moment.get('title'),
+                                'description': moment.get('description')
+                            })
+            
+            # Sort by timestamp
+            interesting_timestamps.sort(key=lambda x: x.get('timestamp', 0))
+            
+            # If we have content-aware timestamps, use them
+            if len(interesting_timestamps) >= moment_count:
+                # ENHANCED SELECTION ALGORITHM:
+                # 1. Always ensure introduction (first 5% of video)
+                # 2. Always ensure conclusion (last 5% of video)
+                # 3. Prioritize visual moments in the middle
+                # 4. Fill remaining slots with important content moments
+                
+                final_timestamps = []
+                
+                # Check if we have an introduction moment in the first 5% of the video
+                intro_threshold = total_duration * 0.05
+                has_intro = any(ts.get('timestamp', 0) <= intro_threshold for ts in interesting_timestamps)
+
+                # Check if we have a conclusion moment in the last 5% of the video
+                conclusion_threshold = total_duration * 0.95
+                has_conclusion = any(ts.get('timestamp', 0) >= conclusion_threshold for ts in interesting_timestamps)
+                
+                # If no intro, add the earliest timestamp or force one at 5% mark
+                if not has_intro:
+                    if interesting_timestamps:
+                        intro_ts = interesting_timestamps[0]
+                        # Force it to be recognized as intro by setting timestamp to 5% mark
+                        intro_ts['timestamp'] = total_duration * 0.05
+                        intro_ts['title'] = "Introduction"
+                        final_timestamps.append(intro_ts)
+                    else:
+                        final_timestamps.append({
+                            'timestamp': total_duration * 0.05,
+                            'title': "Introduction",
+                            'description': "Start of the meeting"
+                        })
+                
+                # Add middle timestamps - prioritize visual cues
+                visual_cue_keywords = ['screen', 'show', 'look', 'see', 'image', 'picture', 'diagram', 'slide']
+                
+                # First pass: add timestamps with visual keywords
+                visual_timestamps = []
+                for ts in interesting_timestamps:
+                    # Check if this is likely an intro or conclusion moment
+                    ts_time = ts.get('timestamp', 0)
+                    if ts_time <= intro_threshold or ts_time >= conclusion_threshold:
+                        continue
+                        
+                    # Check if this contains a visual reference
+                    title = ts.get('title', '').lower()
+                    description = ts.get('description', '').lower()
+                    text = title + " " + description
+                    
+                    if any(keyword in text for keyword in visual_cue_keywords):
+                        visual_timestamps.append(ts)
+                
+                # Second pass: add other timestamps to fill in
+                remaining_needed = moment_count - 2  # Excluding intro and conclusion
+                
+                # First add visual timestamps (up to the limit)
+                if visual_timestamps:
+                    # Sort by timestamp
+                    visual_timestamps.sort(key=lambda x: x.get('timestamp', 0))
+                    final_timestamps.extend(visual_timestamps[:remaining_needed])
+                    remaining_needed -= len(visual_timestamps[:remaining_needed])
+                
+                # If we still need more timestamps, add remaining content moments
+                if remaining_needed > 0:
+                    # Filter out intro, conclusion, and already added visual timestamps
+                    remaining_timestamps = []
+                    for ts in interesting_timestamps:
+                        ts_time = ts.get('timestamp', 0)
+                        # Skip intro/conclusion ranges
+                        if ts_time <= intro_threshold or ts_time >= conclusion_threshold:
+                            continue
+                            
+                        # Skip if already added as a visual timestamp
+                        if any(vts.get('timestamp') == ts.get('timestamp') for vts in visual_timestamps[:remaining_needed]):
+                            continue
+                            
+                        remaining_timestamps.append(ts)
+                    
+                    # If we have remaining timestamps, evenly sample them
+                    if remaining_timestamps:
+                        # Sort by timestamp
+                        remaining_timestamps.sort(key=lambda x: x.get('timestamp', 0))
+                        
+                        # Evenly sample
+                        if len(remaining_timestamps) <= remaining_needed:
+                            # Just add all of them
+                            final_timestamps.extend(remaining_timestamps)
+                        else:
+                            # Evenly sample
+                            step = len(remaining_timestamps) / remaining_needed
+                            for i in range(remaining_needed):
+                                idx = min(int(i * step), len(remaining_timestamps) - 1)
+                                final_timestamps.append(remaining_timestamps[idx])
+                
+                # If no conclusion, add the latest timestamp or force one at 95% mark
+                if not has_conclusion:
+                    if interesting_timestamps:
+                        conclusion_ts = interesting_timestamps[-1]
+                        # Force it to be recognized as conclusion
+                        conclusion_ts['timestamp'] = total_duration * 0.95
+                        conclusion_ts['title'] = "Conclusion"
+                        final_timestamps.append(conclusion_ts)
+                    else:
+                        final_timestamps.append({
+                            'timestamp': total_duration * 0.95,
+                            'title': "Conclusion",
+                            'description': "End of the meeting"
+                        })
+                elif not any(ts.get('timestamp', 0) >= conclusion_threshold for ts in final_timestamps):
+                    # We know there is a conclusion timestamp but we haven't added it yet
+                    for ts in interesting_timestamps:
+                        if ts.get('timestamp', 0) >= conclusion_threshold:
+                            ts['title'] = "Conclusion"
+                            final_timestamps.append(ts)
+                            break
+                
+                # Sort by timestamp
+                final_timestamps.sort(key=lambda x: x.get('timestamp', 0))
+                
+                # Ensure we have the right number of timestamps (should be moment_count)
+                while len(final_timestamps) < moment_count:
+                    # Add evenly spaced timestamps in gaps
+                    current_timestamps = [ts.get('timestamp', 0) for ts in final_timestamps]
+                    largest_gap = 0
+                    largest_gap_start = 0
+                    
+                    for i in range(len(current_timestamps) - 1):
+                        gap = current_timestamps[i+1] - current_timestamps[i]
+                        if gap > largest_gap:
+                            largest_gap = gap
+                            largest_gap_start = current_timestamps[i]
+                    
+                    # Add a timestamp in the middle of the largest gap
+                    new_timestamp = largest_gap_start + largest_gap / 2
+                    final_timestamps.append({
+                        'timestamp': new_timestamp,
+                        'title': "Key point",  # Removed numbering - will add proper numbering later
+                        'description': f"Important moment at {_format_timestamp(new_timestamp)}"
+                    })
+                    
+                    # Re-sort by timestamp
+                    final_timestamps.sort(key=lambda x: x.get('timestamp', 0))
+                
+                # Ensure we have exactly moment_count timestamps
+                final_timestamps = final_timestamps[:moment_count]
+                
+                # Calculate adaptive context window size based on video duration
+                adaptive_window_size = calculate_adaptive_context_window(total_duration)
+                logger.info(f"Using adaptive context window size of {adaptive_window_size} segments for {duration_minutes:.1f} minute video")
+
+                # Now process these smart timestamps into full key moments
+                smart_moments = []
+                for i, timestamp_info in enumerate(final_timestamps):
+                    timestamp = timestamp_info.get('timestamp', 0)
+                    
+                    # Find closest segment
+                    closest_segment_idx = _find_segment_index_by_timestamp(segments, timestamp)
+                    
+                    if closest_segment_idx == -1:
+                        continue
+                    
+                    # Get context segments using semantic boundaries
+                    start_idx, end_idx, transcript_context = extract_semantic_context(
+                        segments, 
+                        closest_segment_idx, 
+                        adaptive_window_size
+                    )
+                    
+                    # Get actual timestamp from segment
+                    actual_timestamp = segments[closest_segment_idx].get("start", timestamp)
+                    
+                    # Create the key moment with rich context
+                    smart_moment = {
+                        "timestamp": actual_timestamp,
+                        "title": "",  # Temporary blank title - will be fixed in a moment
+                        "description": timestamp_info.get('description', f"Important moment at {_format_timestamp(actual_timestamp)}"),
+                        "transcript_text": transcript_context,
+                        "context_start_time": segments[start_idx].get("start", actual_timestamp),
+                        "context_end_time": segments[end_idx].get("end", actual_timestamp)
+                    }
+                    
+                    smart_moments.append(smart_moment)
+                
+                # Fix the titles with proper sequential numbering
+                for i, moment in enumerate(smart_moments):
+                    if i == 0:
+                        moment["title"] = "Introduction"
+                    elif i == len(smart_moments) - 1:
+                        moment["title"] = "Conclusion"
+                    else:
+                        moment["title"] = f"Key point {i}"
+                
+                # If we successfully created moments, return them
+                if smart_moments:
+                    return {
+                        "key_moments": smart_moments,
+                        "success": True,
+                        "count": len(smart_moments)
+                    }
+        
+        # Fall back to the original method if anything above fails
+        logger.info(f"Using original method to create {moment_count} evenly-spaced key moments")
+        
+    except Exception as e:
+        logger.error(f"Error in smart key moments extraction: {str(e)}")
+        import traceback
+        traceback.print_exc()
+    
+    # Standard method (original approach) that always works
+    key_moments = []
+    
+    # Beginning (5% into the video)
+    timestamps = []
+    timestamps.append(total_duration * 0.05)
+    
+    # Evenly distribute remaining timestamps up to 95% of the duration
+    middle_points = moment_count - 2  # Subtract intro and conclusion
+    if middle_points > 0:
+        step = (total_duration * 0.9) / (middle_points + 1)
+        start = total_duration * 0.05 + step
+        for i in range(middle_points):
+            timestamps.append(start + i * step)
+    
+    # End (95% into the video)
+    timestamps.append(total_duration * 0.95)
+    
+    # Create key moments with extended context
+    for i, timestamp in enumerate(timestamps):
+        # Find closest segment to this timestamp
+        closest_segment_idx = _find_segment_index_by_timestamp(segments, timestamp)
+        
+        if closest_segment_idx == -1:
+            continue
+            
+        # Determine segment indices for context window
+        start_idx = max(0, closest_segment_idx - context_window)
+        end_idx = min(len(segments) - 1, closest_segment_idx + context_window)
+        
+        # Get the actual timestamp from the segment
+        actual_timestamp = segments[closest_segment_idx].get("start", timestamp)
+        
+        # Extract transcript text from all segments in the context window
+        transcript_context = " ".join([segment.get("text", "") for segment in segments[start_idx:end_idx+1]])
+        
+        # Create the key moment with rich context
+        key_moment = {
+            "timestamp": actual_timestamp,
+            "title": "",  # Temporary blank title
+            "description": f"Important moment at {_format_timestamp(actual_timestamp)}",
+            "transcript_text": transcript_context,
+            "context_start_time": segments[start_idx].get("start", actual_timestamp),
+            "context_end_time": segments[end_idx].get("end", actual_timestamp)
+        }
+        
+        key_moments.append(key_moment)
+    
+    # Fix the titles with proper sequential numbering
+    for i, moment in enumerate(key_moments):
+        if i == 0:
+            moment["title"] = "Introduction"
+        elif i == len(key_moments) - 1:
+            moment["title"] = "Conclusion"
+        else:
+            moment["title"] = f"Key point {i}"
+    
+    # Return the key moments with success indication
+    return {
+        "key_moments": key_moments,
+        "success": True,
+        "count": len(key_moments)
+    }
+
 def _find_segment_index_by_timestamp(segments: List[Dict[str, Any]], timestamp: float) -> int:
     """
     Find the index of the segment closest to the given timestamp.
@@ -842,6 +1466,8 @@ def _format_timestamp(seconds: float) -> str:
     minutes = int(seconds // 60)
     remaining_seconds = int(seconds % 60)
     return f"{minutes:02d}:{remaining_seconds:02d}"
+
+
 
 def find_visual_cues_in_transcript(transcript: str) -> List[Dict[str, Any]]:
     """

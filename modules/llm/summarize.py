@@ -44,14 +44,7 @@ Format each topic as follows:
    - [Key insight from transcript]
    - [Business implication]
 
-Example format only:
-1. Q3 Budget Revision - Business Impact: High
-   - CFO plans to reduce marketing spend by 15%
-   - Will affect new customer acquisition targets
 
-2. Project Falcon Timeline - Business Impact: Medium
-   - Launch delayed from September to October
-   - Additional QA resources needed
 """
 
 QA_SYSTEM_PROMPT = """
@@ -247,7 +240,7 @@ def summarize_transcript(transcript_text: str, max_length: int = 500) -> Optiona
 
 def extract_topics(transcript_text: str, max_topics: int = 5) -> Optional[List[Dict[str, Any]]]:
     """
-    Extract main topics from a transcript using LLM.
+    Extract main topics from a transcript using LLM with enhanced focus on transcript-specific content.
     
     Args:
         transcript_text: The transcript text
@@ -259,24 +252,42 @@ def extract_topics(transcript_text: str, max_topics: int = 5) -> Optional[List[D
     if not is_available():
         return None
         
+    # Skip very short transcripts - not enough content for meaningful topics
+    if not transcript_text or len(transcript_text.split()) < 50:
+        print(f"Transcript too short for topic extraction ({len(transcript_text.split()) if transcript_text else 0} words)")
+        return []
+        
     try:
         client = get_client()
         
         # Truncate transcript if too long
         truncated_text = _truncate_text(transcript_text)
         
-        prompt = (
-            f"Identify the {max_topics} most business-critical topics discussed in this meeting transcript. "
-            f"For each topic, provide a name, business impact level, and key insights:\n\n{truncated_text}"
+        # Enhanced prompt that explicitly requires transcript-specific topics
+        improved_prompt = (
+            f"Carefully analyze the SPECIFIC CONTENT in this transcript and identify the {max_topics} most important topics discussed. "
+            f"DO NOT use generic topics. Each topic MUST be directly mentioned or clearly implied in the transcript. "
+            f"If fewer than {max_topics} clear topics exist, only return those that are actually present. "
+            f"For each topic, provide a name, business impact level, and SPECIFIC insights from the transcript:\n\n{truncated_text}"
         )
         
+        # Enhanced system prompt to avoid generic topics
+        enhanced_topics_system_prompt = TOPICS_SYSTEM_PROMPT + """
+CRITICAL ADDITIONAL REQUIREMENTS:
+1. ONLY extract topics that are explicitly mentioned or strongly implied in the transcript
+2. NEVER include generic topics like "Meeting Introduction" unless specifically discussed
+3. If you can't identify enough unique topics, return FEWER topics - quality over quantity
+4. Each topic should have SPECIFIC text evidence from the transcript
+5. Avoid vague or generic descriptions - be concrete and specific to this particular transcript
+"""
+        
         result = client.generate(
-            prompt=prompt,
-            system=TOPICS_SYSTEM_PROMPT,
+            prompt=improved_prompt,
+            system=enhanced_topics_system_prompt,
             max_tokens=1000
         )
         
-        # Parse the result into structured format if needed
+        # Parse the result into structured format
         topics = []
         if result:
             lines = result.split('\n')
@@ -306,11 +317,17 @@ def extract_topics(transcript_text: str, max_topics: int = 5) -> Optional[List[D
                         topic_name = re.sub(r'\s*-\s*Business Impact:.*$', '', topic_text)
                     
                     if current_topic:
-                        topics.append(current_topic)
+                        # Don't add topics with very generic names
+                        generic_topics = ["introduction", "general discussion", "misc", "miscellaneous", "other topics"]
+                        if current_topic["name"].lower() not in generic_topics:
+                            topics.append(current_topic)
                         
                     current_topic = {
                         "name": topic_name.strip(), 
+                        "description": f"Discussion about {topic_name.strip()}",
                         "business_impact": impact,
+                        "confidence": 85,  # Default confidence value
+                        "relevance": 1.0,  # For compatibility with other systems
                         "points": []
                     }
                     in_numbered_list = True
@@ -320,17 +337,50 @@ def extract_topics(transcript_text: str, max_topics: int = 5) -> Optional[List[D
                     point = line.lstrip('-').strip()
                     current_topic["points"].append(point)
                     
+                    # Update description with first point
+                    if len(current_topic["points"]) == 1:
+                        current_topic["description"] = point
+                    
                 elif not line.startswith('-') and not in_numbered_list:
                     # This is a topic header (not in a numbered list and not a bullet point)
                     if current_topic:
-                        topics.append(current_topic)
+                        # Don't add topics with very generic names
+                        generic_topics = ["introduction", "general discussion", "misc", "miscellaneous", "other topics"]
+                        if current_topic["name"].lower() not in generic_topics:
+                            topics.append(current_topic)
                         
-                    current_topic = {"name": line, "points": []}
+                    current_topic = {
+                        "name": line, 
+                        "description": f"Discussion related to {line}",
+                        "business_impact": "Medium",
+                        "confidence": 85,
+                        "relevance": 1.0,
+                        "points": []
+                    }
             
             if current_topic:
-                topics.append(current_topic)
-                
-        return topics[:max_topics]
+                # Don't add topics with very generic names
+                generic_topics = ["introduction", "general discussion", "misc", "miscellaneous", "other topics"]
+                if current_topic["name"].lower() not in generic_topics:
+                    topics.append(current_topic)
+        
+        # Perform final validation to ensure topics are specific to this transcript
+        # Reject any that seem too generic by checking for specific details
+        validated_topics = []
+        for topic in topics:
+            # Topics should have at least one specific point or a detailed description
+            has_specific_points = len(topic.get("points", [])) > 0
+            has_detailed_description = len(topic.get("description", "")) > 15
+            
+            if has_specific_points or has_detailed_description:
+                validated_topics.append(topic)
+        
+        # If no specific topics were found, return an empty list
+        if not validated_topics:
+            print("No specific topics identified in transcript")
+            return []
+            
+        return validated_topics[:max_topics]
         
     except Exception as e:
         print(f"Error extracting topics: {e}")

@@ -121,3 +121,25 @@
 4. Connect with local Ollama for transcript summarization
 5. Fix any remaining YouTube tab navigation issues
 6. Begin planning for Zoom/Vonage integration
+
+
+NEW Things From 3/1/25 @ 1-:50AM
+You can upgrade several backend areas without touching the HTML templates:
+
+  1. Model & Processing Performance:
+    - Upgrade Whisper version or implement batch processing
+    - Optimize transcription speed with threading or async processing
+    - Add caching for processed files
+  2. Backend Modules:
+    - Enhance modules/llm/* components with better prompts or models
+    - Improve vector search in modules/vectors/
+    - Upgrade Supabase integration
+  3. Infrastructure:
+    - Add proper logging system
+    - Implement robust error handling and retries
+    - Create background workers for long-running tasks
+  4. New Features (without UI changes):
+    - Enhanced metadata extraction from transcripts
+    - Better speaker identification
+    - Add sentiment analysis to transcriptions
+    - Implement transcript versioning/history
