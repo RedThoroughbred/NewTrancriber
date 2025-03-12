@@ -1312,26 +1312,46 @@ def transcribe():
                                 # Extract timestamps
                                 timestamps = [moment.get('timestamp', 0) for moment in key_moments]
                                 
-                                # Extract screenshots
+                                # Extract screenshots with visual change detection
                                 from modules.video_processing import extract_screenshots_for_transcript
                                 screenshot_results = extract_screenshots_for_transcript(
                                     file_id,
                                     video_path,
                                     timestamps,
-                                    screenshots_dir
+                                    screenshots_dir,
+                                    detect_changes=True,  # Enable change detection to capture UI process sequences
+                                    change_window=10.0    # Look for changes in a 10-second window around each timestamp
                                 )
                                 
-                                # Update key moments with screenshot paths
-                                for i, result in enumerate(screenshot_results):
-                                    if i < len(key_moments):
-                                        # Use the web_path directly from the result
-                                        if 'web_path' in result:
-                                            web_path = result['web_path']
-                                        # Fallback to screenshot_path if web_path not available
-                                        elif 'screenshot_path' in result:
+                                # Update key moments with screenshot paths and sequence information
+                                # Group results by key_moment_index to handle sequences
+                                grouped_results = {}
+                                for result in screenshot_results:
+                                    key_idx = result.get('key_moment_index', 0)
+                                    if key_idx not in grouped_results:
+                                        grouped_results[key_idx] = []
+                                    grouped_results[key_idx].append(result)
+                                
+                                # Process each key moment with its screenshots
+                                for key_idx, moment_results in grouped_results.items():
+                                    if key_idx < len(key_moments):
+                                        # Sort results by sequence index
+                                        moment_results.sort(key=lambda x: x.get('sequence_index', 0))
+                                        
+                                        # Get main screenshot (first in sequence)
+                                        main_result = next((r for r in moment_results if r.get('is_main', False)), 
+                                                          moment_results[0] if moment_results else None)
+                                        
+                                        if not main_result:
+                                            continue
+                                            
+                                        # Get web path for main screenshot
+                                        if 'web_path' in main_result:
+                                            web_path = main_result['web_path']
+                                        elif 'screenshot_path' in main_result:
                                             # Convert the absolute path to a relative web path
                                             static_dir = 'static'
-                                            screenshot_path = result['screenshot_path']
+                                            screenshot_path = main_result['screenshot_path']
                                             if static_dir in screenshot_path:
                                                 web_path = '/' + static_dir + '/' + screenshot_path.split(static_dir)[1]
                                             else:
@@ -1339,8 +1359,41 @@ def transcribe():
                                         else:
                                             continue
                                         
-                                        key_moments[i]['screenshot_path'] = web_path
-                                        logger.info(f"Screenshot for moment {i+1}: {web_path}")
+                                        # Add main screenshot path
+                                        key_moments[key_idx]['screenshot_path'] = web_path
+                                        
+                                        # Add sequence information if multiple screenshots were captured
+                                        if len(moment_results) > 1:
+                                            # Add sequence metadata
+                                            key_moments[key_idx]['has_sequence'] = True
+                                            key_moments[key_idx]['sequence_count'] = len(moment_results)
+                                            
+                                            # Add all screenshot paths in the sequence
+                                            sequence_paths = []
+                                            for res in moment_results:
+                                                if 'web_path' in res:
+                                                    path = res['web_path']
+                                                elif 'screenshot_path' in res:
+                                                    # Convert the absolute path to a relative web path
+                                                    static_dir = 'static'
+                                                    screenshot_path = res['screenshot_path']
+                                                    if static_dir in screenshot_path:
+                                                        path = '/' + static_dir + '/' + screenshot_path.split(static_dir)[1]
+                                                    else:
+                                                        path = screenshot_path
+                                                else:
+                                                    continue
+                                                sequence_paths.append(path)
+                                            
+                                            key_moments[key_idx]['sequence_screenshots'] = sequence_paths
+                                            logger.info(f"Added {len(sequence_paths)} sequence screenshots for moment {key_idx+1}")
+                                        else:
+                                            # Single screenshot - no sequence
+                                            key_moments[key_idx]['has_sequence'] = False
+                                            key_moments[key_idx]['sequence_count'] = 1
+                                            key_moments[key_idx]['sequence_screenshots'] = [web_path]
+                                        
+                                        logger.info(f"Screenshot for moment {key_idx+1}: {web_path}")
                             except Exception as e:
                                 logger.error(f"Error extracting screenshots: {str(e)}")
                                 traceback.print_exc()
@@ -1604,6 +1657,121 @@ def view_transcript(transcript_id):
             print(f"Extracted {field} list from dict")
     
     return render_template('transcript.html', transcript=transcript_data)
+
+@app.route('/key_moments/<transcript_id>')
+def view_key_moments(transcript_id):
+    """
+    Dedicated view for key moments with sequence screenshots.
+    This route provides a focused view of all key moments with their 
+    associated screenshots, especially useful for visual demonstrations.
+    """
+    transcript_path = os.path.join(app.config['TRANSCRIPT_FOLDER'], f"{transcript_id}.json")
+    
+    if not os.path.exists(transcript_path):
+        return render_template('404.html', message="Transcript not found"), 404
+    
+    with open(transcript_path, 'r') as f:
+        transcript_data = json.load(f)
+    
+    # Process key moments for display
+    if 'key_moments' not in transcript_data or not transcript_data['key_moments']:
+        # If no key moments exist, create fallback key moments from screenshots folder
+        screenshots_dir = os.path.join(app.config['UPLOAD_FOLDER'], f"screenshots_{transcript_id}")
+        key_moments = []
+        
+        if os.path.exists(screenshots_dir):
+            # Group screenshot files to detect sequences
+            screenshot_files = {}
+            for filename in os.listdir(screenshots_dir):
+                if filename.endswith(('.jpg', '.png')):
+                    # Parse key moment index from filename
+                    parts = filename.split('_')
+                    if len(parts) >= 4:
+                        try:
+                            # Identify key moment index and sequence index
+                            # Format: transcript_id_screenshot_00_00_00m00s.png
+                            key_moment_index = int(parts[2])
+                            
+                            # Check if it's a sequence screenshot (has extra index)
+                            sequence_index = 0
+                            timestamp_part = parts[-1]
+                            
+                            if len(parts) > 4 and parts[3].isdigit():
+                                # This is a sequence screenshot
+                                sequence_index = int(parts[3])
+                                timestamp_part = parts[-1]
+                            
+                            # Parse timestamp
+                            timestamp = float(timestamp_part.replace('s.jpg', '').replace('s.png', ''))
+                            
+                            # Group by key moment index
+                            if key_moment_index not in screenshot_files:
+                                screenshot_files[key_moment_index] = []
+                                
+                            screenshot_files[key_moment_index].append({
+                                'filename': filename,
+                                'sequence_index': sequence_index,
+                                'timestamp': timestamp,
+                                'path': f"/static/uploads/screenshots_{transcript_id}/{filename}"
+                            })
+                        except (ValueError, IndexError) as e:
+                            print(f"Error parsing filename {filename}: {e}")
+            
+            # Process grouped screenshots into key moments
+            for key_moment_index, screenshots in screenshot_files.items():
+                # Sort screenshots by sequence index
+                screenshots.sort(key=lambda x: x['sequence_index'])
+                
+                if not screenshots:
+                    continue
+                    
+                # Get the main screenshot (index 0)
+                main_screenshot = screenshots[0]
+                timestamp = main_screenshot['timestamp']
+                
+                # Find closest segment to this timestamp for transcript text
+                transcript_text = ""
+                try:
+                    if transcript_data['segments']:
+                        closest_segment = min(transcript_data['segments'], 
+                                            key=lambda s: abs(float(s.get('start', 0)) - timestamp))
+                        transcript_text = closest_segment.get('text', '')
+                except Exception as e:
+                    print(f"Error finding transcript text: {e}")
+                
+                # Create the key moment object
+                moment = {
+                    "timestamp": timestamp,
+                    "title": f"Key Point {key_moment_index + 1}",
+                    "description": f"Visual demonstration at {int(timestamp//60):02d}:{int(timestamp%60):02d}",
+                    "transcript_text": transcript_text,
+                    "screenshot_path": main_screenshot['path'],
+                    "has_sequence": len(screenshots) > 1,
+                    "sequence_count": len(screenshots),
+                    "sequence_screenshots": [s['path'] for s in screenshots]
+                }
+                
+                key_moments.append(moment)
+                
+            # Sort key moments by timestamp
+            key_moments.sort(key=lambda x: x['timestamp'])
+            
+        # Update transcript data with the key moments
+        transcript_data['key_moments'] = key_moments
+    
+    # Ensure all key moments have the necessary properties for UI sequence display
+    for moment in transcript_data['key_moments']:
+        # If sequence properties don't exist, add them
+        if 'has_sequence' not in moment:
+            moment['has_sequence'] = False
+            
+        if 'sequence_count' not in moment:
+            moment['sequence_count'] = 1
+            
+        if 'sequence_screenshots' not in moment and 'screenshot_path' in moment:
+            moment['sequence_screenshots'] = [moment['screenshot_path']]
+    
+    return render_template('key_moments.html', transcript=transcript_data, key_moments=transcript_data['key_moments'])
 
 @app.route('/download/<transcript_id>')
 def download_transcript(transcript_id):

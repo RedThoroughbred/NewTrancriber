@@ -71,6 +71,32 @@
     </style>
 </head>
 <body class="min-h-screen bg-gray-50 text-gray-800 light-mode">
+    <!-- Image Preview Modal -->
+    <div id="image-preview-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="relative w-full max-w-5xl p-4">
+            <button id="close-image-preview" class="absolute top-2 right-2 text-white bg-gray-800/70 hover:bg-gray-700 rounded-full p-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            <img id="modal-image" class="max-h-[80vh] mx-auto" src="" alt="Screenshot Preview">
+            <div class="text-white text-center mt-4">
+                <h4 id="modal-image-title" class="text-lg font-medium"></h4>
+                <p id="modal-image-description" class="text-sm opacity-80 mt-1"></p>
+            </div>
+            <div class="flex justify-center mt-4 space-x-4">
+                <button id="download-image" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                    <span class="flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div class="container mx-auto px-4 py-6">
         <header class="flex justify-between items-center mb-8 bg-white border border-gray-200 rounded-xl shadow-sm p-4">
             <div class="flex items-center space-x-4">
@@ -99,7 +125,7 @@
             <div class="bg-white rounded-xl p-5 mb-6 transition-all shadow-sm border border-gray-200">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div class="flex items-center space-x-4">
-                        <div class="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                        <div class="flex-shrink-0 w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
@@ -107,8 +133,8 @@
                         <div>
                             <h2 class="text-xl font-bold text-gray-800">{{ transcript.title }}</h2>
                             <p class="text-gray-500 text-sm flex items-center">
-                                <span class="mr-3">Key Visual Moments</span>
-                                <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-600">
+                                <span class="mr-3 font-medium">Key Visual Moments</span>
+                                <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-blue-600 text-white">
                                     {{ key_moments|length }} moments
                                 </span>
                             </p>
@@ -121,6 +147,12 @@
                             </svg>
                             Back to Transcript
                         </a>
+                        <button onclick="copyDocumentation()" class="btn-hover bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium py-2 px-4 rounded-lg border border-blue-200 transition flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                            Copy as Markdown
+                        </button>
                         <a href="/download/{{ transcript.id }}" class="btn-hover bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg border border-gray-300 transition flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -138,7 +170,7 @@
                             <div class="bg-white rounded-xl shadow-md overflow-hidden transition-shadow hover:shadow-lg" id="moment-{{ loop.index }}">
                                 <div class="p-5 border-b border-gray-200">
                                     <div class="flex items-center justify-between mb-2">
-                                        <h2 class="text-xl font-semibold text-blue-800">{{ moment.title }}</h2>
+                                        <h2 class="text-xl font-bold text-gray-800">{{ moment.title }}</h2>
                                         <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
                                             {% set minutes = (moment.timestamp // 60)|int %}
                                             {% set seconds = (moment.timestamp % 60)|int %}
@@ -150,9 +182,60 @@
                                 
                                 <div class="relative">
                                     {% if moment.screenshot_path %}
-                                        <img src="{{ moment.screenshot_path }}" alt="{{ moment.title }}" class="w-full object-contain max-h-96">
+                                        {% if moment.has_sequence and moment.sequence_screenshots|length > 1 %}
+                                            <!-- Sequence Carousel -->
+                                            <div class="relative screenshot-carousel" id="carousel-{{ loop.index }}">
+                                                <!-- Main carousel container -->
+                                                <div class="relative overflow-hidden">
+                                                    <!-- Carousel slides -->
+                                                    <div class="flex transition-transform duration-300 ease-in-out">
+                                                        {% for screenshot_path in moment.sequence_screenshots %}
+                                                            <div class="w-full flex-shrink-0">
+                                                                <img src="{{ screenshot_path }}" alt="{{ moment.title }} - Frame {{ loop.index }}" 
+                                                                    class="w-full object-contain max-h-96 cursor-pointer hover:opacity-90 transition-opacity"
+                                                                    onclick="openImagePreview('{{ screenshot_path }}', '{{ moment.title }} - Frame {{ loop.index }}', '{{ moment.description }}')"
+                                                                    data-index="{{ loop.index0 }}">
+                                                            </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                    
+                                                    <!-- Navigation arrows -->
+                                                    <button class="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/80 p-2 rounded-full shadow-md text-gray-700 hover:text-blue-600 hover:bg-white transition-colors z-10 carousel-prev">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                                        </svg>
+                                                    </button>
+                                                    <button class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/80 p-2 rounded-full shadow-md text-gray-700 hover:text-blue-600 hover:bg-white transition-colors z-10 carousel-next">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                                
+                                                <!-- Carousel indicators/thumbnails -->
+                                                <div class="flex justify-center mt-2 space-x-1">
+                                                    {% for screenshot_path in moment.sequence_screenshots %}
+                                                        <button class="h-1.5 rounded-full transition-all duration-200 carousel-indicator {% if loop.index == 1 %}w-6 bg-blue-600{% else %}w-3 bg-gray-300{% endif %}" 
+                                                                data-index="{{ loop.index0 }}"></button>
+                                                    {% endfor %}
+                                                </div>
+                                                
+                                                <!-- UI Process indicator -->
+                                                <div class="absolute top-2 left-2 bg-blue-600/90 text-white px-2 py-1 rounded-lg text-xs font-medium">
+                                                    UI Sequence ({{ moment.sequence_count }} frames)
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <!-- Single screenshot -->
+                                            <img src="{{ moment.screenshot_path }}" 
+                                                 alt="{{ moment.title }}" 
+                                                 class="w-full object-contain max-h-96 cursor-pointer hover:opacity-90 transition-opacity"
+                                                 onclick="openImagePreview('{{ moment.screenshot_path }}', '{{ moment.title }}', '{{ moment.description }}')">
+                                        {% endif %}
+                                        <!-- Copy button (always show) -->
                                         <div class="absolute top-2 right-2">
-                                            <button onclick="copyScreenshotLink('{{ moment.screenshot_path }}')" class="bg-white/80 hover:bg-white p-2 rounded-full shadow-md text-gray-700 hover:text-blue-600 transition-colors">
+                                            <button onclick="copyScreenshotLink('{{ moment.screenshot_path }}')" 
+                                                    class="bg-white/80 hover:bg-white p-2 rounded-full shadow-md text-gray-700 hover:text-blue-600 transition-colors">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                                                 </svg>
@@ -173,11 +256,11 @@
                                 <div class="p-5 bg-gray-50">
                                     <div class="flex justify-between items-center mb-2">
                                         <h3 class="text-sm font-medium text-gray-500">Transcript at this moment:</h3>
-                                        <button onclick="copyText('{{ moment.transcript_text }}')" class="text-blue-600 hover:text-blue-800 text-sm flex items-center">
+                                        <button onclick="copyText(`{{ moment.transcript_text|replace('\n', ' ')|replace('`', '\\`') }}`)" class="text-blue-600 hover:text-blue-800 text-sm flex items-center bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded transition">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" />
                                             </svg>
-                                            Copy
+                                            Copy Text
                                         </button>
                                     </div>
                                     <div class="bg-white p-4 rounded border border-gray-200">
@@ -217,23 +300,199 @@
     <script src="/static/js/main.js"></script>
     <script>
         function copyText(text) {
-            navigator.clipboard.writeText(text).then(() => {
+            // Check if clipboard API is available
+            if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast('Copied transcript text to clipboard!');
+                }).catch(err => {
+                    console.error('Failed to copy text: ', err);
+                    fallbackCopy(text);
+                });
+            } else {
+                // Fallback approach
+                fallbackCopy(text);
+            }
+        }
+        
+        function fallbackCopy(text) {
+            try {
+                // Create a temporary textarea
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                
+                // Make the textarea invisible and append it to the document
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
+                document.body.appendChild(textArea);
+                
+                // Select and copy the text
+                textArea.select();
+                document.execCommand('copy');
+                
+                // Remove the textarea
+                document.body.removeChild(textArea);
                 showToast('Copied transcript text to clipboard!');
-            }).catch(err => {
-                console.error('Failed to copy text: ', err);
+            } catch (err) {
+                console.error('Fallback copy failed: ', err);
                 showToast('Failed to copy text', true);
+            }
+        }
+        
+        // Generate documentation from key moments
+        function generateDocumentation() {
+            const transcriptTitle = "{{ transcript.title }}";
+            // Select all moment divs in key_moments.html (they have IDs like "moment-1", "moment-2", etc.)
+            const moments = Array.from(document.querySelectorAll('div[id^="moment-"]'));
+            
+            if (moments.length === 0) {
+                console.error("No key moments found with selector 'div[id^=\"moment-\"]'");
+                return "No key moments found to document.";
+            }
+            
+            console.log(`Found ${moments.length} key moments to document.`);
+            
+            let docContent = "";
+            
+            // Start with title/header in Markdown format
+            docContent += `# ${transcriptTitle} - Key Moments\n\n`;
+            
+            // Process each moment
+            moments.forEach((moment, index) => {
+                try {
+                    // Extract details from the moment card
+                    const titleElem = moment.querySelector('h2');
+                    const title = titleElem?.textContent.trim() || `Moment ${index + 1}`;
+                    console.log(`Processing moment ${index + 1}: ${title}`);
+                    
+                    // Extract timestamp (if available)
+                    let timestamp = "";
+                    const timestampElem = moment.querySelector('.bg-blue-100.text-blue-800');
+                    if (timestampElem) {
+                        timestamp = timestampElem.textContent.trim();
+                    } else {
+                        console.log("No timestamp found for this moment");
+                    }
+                    
+                    // Extract description (if available)
+                    let description = "";
+                    const descriptionElem = moment.querySelector('p.text-gray-700');
+                    if (descriptionElem) {
+                        description = descriptionElem.textContent.trim();
+                    } else {
+                        console.log("No description found for this moment");
+                    }
+                    
+                    // Extract screenshot URL (if available)
+                    let screenshotUrl = "";
+                    let imgFound = false;
+                    
+                    // Try to get image from carousel first (if present)
+                    const carousel = moment.querySelector('.screenshot-carousel');
+                    if (carousel) {
+                        const allImages = carousel.querySelectorAll('img');
+                        if (allImages && allImages.length > 0) {
+                            screenshotUrl = allImages[0].src; // Default to first image
+                            imgFound = true;
+                            console.log(`Found carousel with ${allImages.length} images`);
+                            
+                            // Try to find active image in carousel
+                            const slideContainer = carousel.querySelector('.flex');
+                            if (slideContainer && slideContainer.style.transform) {
+                                // Get the image that corresponds to the current position
+                                const currentPos = slideContainer.style.transform;
+                                const match = currentPos.match(/translateX\(-(\d+)%\)/);
+                                if (match && match[1]) {
+                                    const slideIndex = parseInt(match[1]) / 100; // Convert -100%, -200% etc. to index
+                                    if (slideIndex >= 0 && slideIndex < allImages.length) {
+                                        screenshotUrl = allImages[slideIndex].src;
+                                        console.log(`Using slide ${slideIndex} from carousel`);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // If no carousel, try to find any image
+                    if (!imgFound) {
+                        const img = moment.querySelector('img');
+                        if (img) {
+                            screenshotUrl = img.src;
+                            imgFound = true;
+                            console.log("Found direct image");
+                        }
+                    }
+                    
+                    if (!imgFound) {
+                        console.log("No screenshot found for this moment");
+                    }
+                    
+                    // Extract transcript text
+                    let transcript = "";
+                    const transcriptElem = moment.querySelector('.bg-white.p-4.rounded.border p');
+                    if (transcriptElem) {
+                        transcript = transcriptElem.textContent.trim();
+                    } else {
+                        console.log("No transcript text found for this moment");
+                    }
+                    
+                    // Format the moment in Markdown
+                    docContent += `## ${title} (${timestamp})\n\n`;
+                    docContent += `${description}\n\n`;
+                    
+                    if (screenshotUrl) {
+                        const fullUrl = screenshotUrl.startsWith('http') ? screenshotUrl : window.location.origin + screenshotUrl;
+                        docContent += `![Screenshot at ${timestamp}](${fullUrl})\n\n`;
+                    }
+                    
+                    docContent += `> ${transcript}\n\n`;
+                    docContent += `---\n\n`;
+                } catch (err) {
+                    console.error(`Error processing moment ${index + 1}:`, err);
+                }
             });
+            
+            return docContent;
+        }
+        
+        // Function to copy documentation to clipboard and show preview
+        function copyDocumentation() {
+            try {
+                const docContent = generateDocumentation();
+                
+                // Try to copy using clipboard API
+                if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(docContent).then(() => {
+                        showToast('Copied documentation to clipboard!');
+                    }).catch(err => {
+                        console.error('Error copying documentation: ', err);
+                        fallbackCopy(docContent);
+                    });
+                } else {
+                    // Use fallback
+                    fallbackCopy(docContent);
+                }
+            } catch (err) {
+                console.error('Error generating documentation: ', err);
+                showToast('Failed to generate documentation', true);
+            }
         }
         
         function copyScreenshotLink(path) {
             // Get the full URL
             const fullUrl = window.location.origin + path;
-            navigator.clipboard.writeText(fullUrl).then(() => {
-                showToast('Copied screenshot link to clipboard!');
-            }).catch(err => {
-                console.error('Failed to copy screenshot link: ', err);
-                showToast('Failed to copy link', true);
-            });
+            
+            // Check if clipboard API is available
+            if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(fullUrl).then(() => {
+                    showToast('Copied screenshot link to clipboard!');
+                }).catch(err => {
+                    console.error('Failed to copy screenshot link: ', err);
+                    fallbackCopy(fullUrl);
+                });
+            } else {
+                // Use fallback approach
+                fallbackCopy(fullUrl);
+            }
         }
         
         function showToast(message, isError = false) {
@@ -260,6 +519,175 @@
                 toast.classList.add('translate-y-10', 'opacity-0');
             }, 3000);
         }
+        
+        // Image preview modal functionality
+        function openImagePreview(imageSrc, title, description) {
+            const modal = document.getElementById('image-preview-modal');
+            const modalImage = document.getElementById('modal-image');
+            const modalTitle = document.getElementById('modal-image-title');
+            const modalDescription = document.getElementById('modal-image-description');
+            const downloadButton = document.getElementById('download-image');
+            
+            // Set image and metadata
+            modalImage.src = imageSrc;
+            modalTitle.textContent = title || '';
+            modalDescription.textContent = description || '';
+            
+            // Set up download button
+            downloadButton.onclick = function() {
+                // Create a temporary link element
+                const a = document.createElement('a');
+                a.href = imageSrc;
+                a.download = (title || 'screenshot') + '.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            };
+            
+            // Show the modal with a fade-in effect
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.style.opacity = 1;
+            }, 10);
+            
+            // Set up close button
+            const closeButton = document.getElementById('close-image-preview');
+            closeButton.onclick = closeImagePreview;
+            
+            // Set up click outside to close
+            modal.onclick = function(e) {
+                if (e.target === modal) {
+                    closeImagePreview();
+                }
+            };
+            
+            // Set up escape key to close
+            document.addEventListener('keydown', handleEscKeyPress);
+        }
+        
+        function closeImagePreview() {
+            const modal = document.getElementById('image-preview-modal');
+            modal.style.opacity = 0;
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+            
+            // Remove event listener
+            document.removeEventListener('keydown', handleEscKeyPress);
+        }
+        
+        function handleEscKeyPress(e) {
+            if (e.key === 'Escape') {
+                closeImagePreview();
+            }
+        }
+        
+        // Screenshot carousel functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const carousels = document.querySelectorAll('.screenshot-carousel');
+            const modal = document.getElementById('image-preview-modal');
+            
+            // Set up image preview modal
+            if (modal) {
+                modal.style.opacity = 0;
+                modal.style.transition = 'opacity 0.3s ease';
+            }
+            
+            carousels.forEach(carousel => {
+                const slideContainer = carousel.querySelector('.flex');
+                const slides = carousel.querySelectorAll('.flex-shrink-0');
+                const indicators = carousel.querySelectorAll('.carousel-indicator');
+                const prevBtn = carousel.querySelector('.carousel-prev');
+                const nextBtn = carousel.querySelector('.carousel-next');
+                
+                if (!slides.length) return;
+                
+                let currentIndex = 0;
+                const slideWidth = 100; // 100%
+                
+                // Initialize
+                updateCarousel();
+                
+                // Event listeners
+                if (prevBtn) {
+                    prevBtn.addEventListener('click', (e) => {
+                        e.stopPropagation(); // Prevent image click when clicking navigation
+                        currentIndex = (currentIndex > 0) ? currentIndex - 1 : slides.length - 1;
+                        updateCarousel();
+                    });
+                }
+                
+                if (nextBtn) {
+                    nextBtn.addEventListener('click', (e) => {
+                        e.stopPropagation(); // Prevent image click when clicking navigation
+                        currentIndex = (currentIndex < slides.length - 1) ? currentIndex + 1 : 0;
+                        updateCarousel();
+                    });
+                }
+                
+                // Add click handlers for indicators
+                indicators.forEach((indicator, index) => {
+                    indicator.addEventListener('click', (e) => {
+                        e.stopPropagation(); // Prevent image click when clicking indicator
+                        currentIndex = index;
+                        updateCarousel();
+                    });
+                });
+                
+                // Update carousel position and indicators
+                function updateCarousel() {
+                    // Update slide position
+                    slideContainer.style.transform = `translateX(-${currentIndex * slideWidth}%)`;
+                    
+                    // Update indicators
+                    indicators.forEach((indicator, index) => {
+                        if (index === currentIndex) {
+                            indicator.classList.add('w-6', 'bg-blue-600');
+                            indicator.classList.remove('w-3', 'bg-gray-300');
+                        } else {
+                            indicator.classList.remove('w-6', 'bg-blue-600');
+                            indicator.classList.add('w-3', 'bg-gray-300');
+                        }
+                    });
+                }
+                
+                // Add keyboard navigation
+                carousel.setAttribute('tabindex', '0');
+                carousel.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowLeft') {
+                        currentIndex = (currentIndex > 0) ? currentIndex - 1 : slides.length - 1;
+                        updateCarousel();
+                    } else if (e.key === 'ArrowRight') {
+                        currentIndex = (currentIndex < slides.length - 1) ? currentIndex + 1 : 0;
+                        updateCarousel();
+                    }
+                });
+                
+                // Add swipe support for touch devices
+                let touchStartX = 0;
+                let touchEndX = 0;
+                
+                carousel.addEventListener('touchstart', (e) => {
+                    touchStartX = e.changedTouches[0].screenX;
+                }, { passive: true });
+                
+                carousel.addEventListener('touchend', (e) => {
+                    touchEndX = e.changedTouches[0].screenX;
+                    handleSwipe();
+                }, { passive: true });
+                
+                function handleSwipe() {
+                    if (touchEndX < touchStartX - 50) {
+                        // Swipe left, show next slide
+                        currentIndex = (currentIndex < slides.length - 1) ? currentIndex + 1 : 0;
+                    } else if (touchEndX > touchStartX + 50) {
+                        // Swipe right, show previous slide
+                        currentIndex = (currentIndex > 0) ? currentIndex - 1 : slides.length - 1;
+                    }
+                    updateCarousel();
+                }
+            });
+        });
     </script>
 </body>
 </html>

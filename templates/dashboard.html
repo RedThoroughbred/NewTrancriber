@@ -218,18 +218,30 @@
 
                     <!-- Recent Activity Card -->
                     <div class="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                        <div class="flex justify-between">
+                        <div class="flex justify-between mb-2">
                             <div>
                                 <p class="text-sm font-medium text-gray-500 mb-1">Latest Transcript</p>
+                                {% set latest_transcript = none %}
                                 {% set latest_date = none %}
+                                
                                 {% for transcript in transcripts %}
+                                    {# First try to get most recent by date field #}
                                     {% if transcript.date and (not latest_date or transcript.date > latest_date) %}
                                         {% set latest_date = transcript.date %}
+                                        {% set latest_transcript = transcript %}
+                                    {% elif not latest_transcript %}
+                                        {# Fallback: if no transcript has date, use the first one #}
+                                        {% set latest_transcript = transcript %}
                                     {% endif %}
                                 {% endfor %}
                                 
+                                {# If still no latest_transcript found, try to use the first transcript in the list #}
+                                {% if not latest_transcript and transcripts|length > 0 %}
+                                    {% set latest_transcript = transcripts[0] %}
+                                {% endif %}
+                                
                                 {% if latest_date %}
-                                    <p class="text-2xl font-bold text-gray-800">
+                                    <p class="text-sm font-medium text-gray-700">
                                         {% set days_ago = ((now - latest_date|to_datetime).days)|abs if now is defined else 0 %}
                                         {% if days_ago == 0 %}
                                             Today
@@ -240,24 +252,35 @@
                                         {% endif %}
                                     </p>
                                 {% else %}
-                                    <p class="text-2xl font-bold text-gray-800">None</p>
+                                    <p class="text-sm font-bold text-gray-800">No transcripts yet</p>
                                 {% endif %}
                             </div>
-                            <div class="bg-blue-100 p-3 rounded-lg">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <div class="bg-blue-600 p-3 rounded-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
                             </div>
                         </div>
-                        {% if latest_date %}
-                        <div class="mt-2 text-xs text-blue-600 hover:text-blue-800 cursor-pointer">
-                            <a href="/dashboard?sort=date&order=desc" class="flex items-center">
-                                <span>View newest transcripts</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </a>
-                        </div>
+                        
+                        {% if latest_transcript %}
+                            <!-- Transcript title with truncation -->
+                            <div class="mb-2">
+                                <h3 class="font-bold text-gray-800 text-lg truncate" title="{{ latest_transcript.title }}">
+                                    {{ latest_transcript.title }}
+                                </h3>
+                            </div>
+                            <div class="mt-2 text-xs">
+                                <a href="/transcript/{{ latest_transcript.id }}" class="flex items-center text-blue-600 hover:text-blue-800 cursor-pointer font-medium">
+                                    <span>View transcript</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </a>
+                            </div>
+                        {% else %}
+                            <div class="mt-2 p-2 bg-gray-50 rounded border border-gray-200 text-center">
+                                <p class="text-gray-500 text-sm">Upload a video to create your first transcript</p>
+                            </div>
                         {% endif %}
                     </div>
                 </div>

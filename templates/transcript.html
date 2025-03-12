@@ -397,7 +397,7 @@ display: none;
                     <div class="space-y-5">
                         <!-- Tab navigation for sidebar tools -->
                         <div class="flex border-b border-gray-200">
-                            <button id="tab-summary" onclick="switchTab('summary')" class="flex-1 py-3 px-2 text-blue-700 border-b-2 border-blue-500 font-medium text-xs sm:text-sm">
+                            <button id="tab-summary" onclick="switchTab('summary')" class="flex-1 py-3 px-2 text-gray-800 border-b-2 border-blue-600 font-bold text-xs sm:text-sm">
                                 <span class="flex items-center justify-center">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -405,7 +405,7 @@ display: none;
                                     <span class="whitespace-nowrap">Summary</span>
                                 </span>
                             </button>
-                            <button id="tab-topics" onclick="switchTab('topics')" class="flex-1 py-3 px-2 text-gray-400 border-b-2 border-transparent hover:text-gray-300 font-medium text-xs sm:text-sm">
+                            <button id="tab-topics" onclick="switchTab('topics')" class="flex-1 py-3 px-2 text-gray-600 border-b-2 border-transparent hover:text-gray-800 font-medium text-xs sm:text-sm">
                                 <span class="flex items-center justify-center">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
@@ -413,7 +413,7 @@ display: none;
                                     <span class="whitespace-nowrap">Topics</span>
                                 </span>
                             </button>
-                            <button id="tab-insights" onclick="switchTab('insights')" class="flex-1 py-3 px-2 text-gray-400 border-b-2 border-transparent hover:text-gray-300 font-medium text-xs sm:text-sm">
+                            <button id="tab-insights" onclick="switchTab('insights')" class="flex-1 py-3 px-2 text-gray-600 border-b-2 border-transparent hover:text-gray-800 font-medium text-xs sm:text-sm">
                                 <span class="flex items-center justify-center">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -421,7 +421,7 @@ display: none;
                                     <span class="whitespace-nowrap">Insights</span>
                                 </span>
                             </button>
-                            <button id="tab-key-moments" onclick="switchTab('key-moments')" class="flex-1 py-3 px-2 text-gray-400 border-b-2 border-transparent hover:text-gray-300 font-medium text-xs sm:text-sm">
+                            <button id="tab-key-moments" onclick="switchTab('key-moments')" class="flex-1 py-3 px-2 text-gray-600 border-b-2 border-transparent hover:text-gray-800 font-medium text-xs sm:text-sm">
                                 <span class="flex items-center justify-center">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -434,7 +434,7 @@ display: none;
                             <!-- Summary Panel -->
                             <div id="panel-summary" class="p-5">
                                 <div class="flex justify-between items-center mb-4">
-                                    <h3 class="text-lg font-medium text-primary-300">Transcript Summary</h3>
+                                    <h3 class="text-lg font-bold text-gray-800">Transcript Summary</h3>
                                 </div>
 
                                 {% if transcript.summary %}
@@ -455,7 +455,7 @@ display: none;
                             <!-- Topics Panel -->
                             <div id="panel-topics" class="p-5 hidden">
                                 <div class="flex justify-between items-center mb-4">
-                                    <h3 class="text-lg font-medium text-primary-300">Key Topics</h3>
+                                    <h3 class="text-lg font-bold text-gray-800">Key Topics</h3>
                                 </div>
 
                                 {% if transcript.topics %}
@@ -489,7 +489,7 @@ display: none;
 
                             <!-- Meeting Insights Panel (New) -->
                             <div id="panel-insights" class="p-5 hidden">
-                                <h3 class="text-lg font-medium mb-4 text-primary-300">Meeting Intelligence</h3>
+                                <h3 class="text-lg font-bold mb-4 text-gray-800">Meeting Intelligence</h3>
 
                                 <!-- Questions & Answers -->
                                 <div class="space-y-4">
@@ -584,13 +584,14 @@ display: none;
                             <!-- Key Moments Panel with IMPROVED clickable screenshots -->
                             <div id="panel-key-moments" class="p-5 hidden">
                                 <div class="flex justify-between items-center mb-4">
-                                    <h3 class="text-lg font-medium text-primary-300">Key Visual Moments</h3>
+                                    <h3 class="text-lg font-bold text-gray-800">Key Visual Moments</h3>
                                     <div class="flex space-x-2">
-                                        <select id="doc-format-select" class="text-xs bg-gray-100 border border-gray-300 rounded-lg px-2 py-1">
-                                            <option value="confluence">Confluence Format</option>
-                                            <option value="markdown">Markdown Format</option>
-                                            <option value="plain">Plain Text</option>
-                                        </select>
+                                        <a href="/key_moments/{{ transcript.id }}" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-full transition flex items-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                            Full Screen View
+                                        </a>
                                         <button
                                             class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-full transition"
                                             onclick="copyDocumentation()">
@@ -598,7 +599,7 @@ display: none;
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" />
                                                 </svg>
-                                                Copy All for Documentation
+                                                Copy as Markdown
                                             </span>
                                         </button>
                                     </div>
@@ -697,12 +698,12 @@ display: none;
                                                             <div class="flex justify-between items-center mb-2">
                                                                 <h5 class="text-xs font-medium text-gray-500">Transcript Context:</h5>
                                                                 <button
-                                                                    onclick="event.stopPropagation(); copyText('{{ moment.transcript_text|replace("\n", " ")|replace("'", "\\\\'") }}')"
-                                                                    class="text-xs text-blue-600 hover:text-blue-800 flex items-center">
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    onclick="event.stopPropagation(); copyText(`{{ moment.transcript_text|replace('\n', ' ')|replace('`', '\\`') }}`)"
+                                                                    class="text-sm text-blue-600 hover:text-blue-800 flex items-center bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded transition">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" />
                                                                     </svg>
-                                                                    Copy
+                                                                    Copy Text
                                                                 </button>
                                                             </div>
                                                             <div class="bg-gray-50 rounded-lg p-3 text-xs text-gray-700 max-h-36 overflow-auto scrollbar-thin whitespace-pre-wrap">
@@ -1255,8 +1256,8 @@ display: none;
         tabButtons.forEach(tabId => {
             const tab = document.getElementById(tabId);
             if (tab) {
-                tab.classList.remove('border-primary-500', 'text-primary-300', 'border-blue-500', 'text-blue-700');
-                tab.classList.add('border-transparent', 'text-gray-400');
+                tab.classList.remove('border-primary-500', 'text-primary-300', 'border-blue-500', 'text-blue-700', 'border-blue-600', 'text-gray-800', 'font-bold');
+                tab.classList.add('border-transparent', 'text-gray-600', 'font-medium');
             }
         });
 
@@ -1270,8 +1271,8 @@ display: none;
 
         const selectedTab = document.getElementById(`tab-${tabName}`);
         if (selectedTab) {
-            selectedTab.classList.remove('border-transparent', 'text-gray-400');
-            selectedTab.classList.add('border-primary-500', 'text-primary-300');
+            selectedTab.classList.remove('border-transparent', 'text-gray-600', 'font-medium');
+            selectedTab.classList.add('border-blue-600', 'text-gray-800', 'font-bold');
         } else {
             console.warn(`Tab button not found: tab-${tabName}`);
         }
@@ -1705,7 +1706,8 @@ function scrollToTranscriptSegment(segmentIndex) {
     
     // Generate documentation from key moments
     function generateDocumentation() {
-        const format = document.getElementById('doc-format-select')?.value || 'markdown';
+        // Default to Markdown format since we removed the selector
+        const format = 'markdown';
         const transcriptTitle = "{{ transcript.title }}";
         const moments = Array.from(document.querySelectorAll('#panel-key-moments .key-moment-card'));
 
@@ -1715,14 +1717,8 @@ function scrollToTranscriptSegment(segmentIndex) {
 
         let docContent = "";
 
-        // Start with title/header
-        if (format === 'confluence') {
-            docContent += `h1. ${transcriptTitle} - Key Moments\n\n`;
-        } else if (format === 'markdown') {
-            docContent += `# ${transcriptTitle} - Key Moments\n\n`;
-        } else {
-            docContent += `${transcriptTitle} - KEY MOMENTS\n${'='.repeat(transcriptTitle.length + 14)}\n\n`;
-        }
+        // Start with title/header - using Markdown format
+        docContent += `# ${transcriptTitle} - Key Moments\n\n`;
 
         // Add each moment
         moments.forEach((moment, index) => {
@@ -1739,43 +1735,17 @@ function scrollToTranscriptSegment(segmentIndex) {
                 screenshotUrl = img.src;
             }
 
-            // Format based on selected output format
-            if (format === 'confluence') {
-                docContent += `h2. ${title} (${timestamp})\n\n`;
-                docContent += `${description}\n\n`;
+            // Using Markdown format for all documentation
+            docContent += `## ${title} (${timestamp})\n\n`;
+            docContent += `${description}\n\n`;
 
-                if (screenshotUrl) {
-                    // Use actual URL for Confluence image
-                    const fullUrl = screenshotUrl.startsWith('http') ? screenshotUrl : window.location.origin + screenshotUrl;
-                    docContent += `!${fullUrl}|width=500!\n\n`;
-                }
-
-                docContent += `{quote}\n${transcript}\n{quote}\n\n`;
-                docContent += `----\n\n`;
+            if (screenshotUrl) {
+                const fullUrl = screenshotUrl.startsWith('http') ? screenshotUrl : window.location.origin + screenshotUrl;
+                docContent += `![Screenshot at ${timestamp}](${fullUrl})\n\n`;
             }
-            else if (format === 'markdown') {
-                docContent += `## ${title} (${timestamp})\n\n`;
-                docContent += `${description}\n\n`;
 
-                if (screenshotUrl) {
-                    const fullUrl = screenshotUrl.startsWith('http') ? screenshotUrl : window.location.origin + screenshotUrl;
-                    docContent += `![Screenshot at ${timestamp}](${fullUrl})\n\n`;
-                }
-
-                docContent += `> ${transcript}\n\n`;
-                docContent += `---\n\n`;
-            }
-            else { // Plain text
-                docContent += `${title} (${timestamp})\n${'~'.repeat(title.length + timestamp.length + 3)}\n\n`;
-                docContent += `${description}\n\n`;
-
-                if (screenshotUrl) {
-                    docContent += `[Screenshot URL: ${screenshotUrl}]\n\n`;
-                }
-
-                docContent += `"${transcript}"\n\n`;
-                docContent += `----------\n\n`;
-            }
+            docContent += `> ${transcript}\n\n`;
+            docContent += `---\n\n`;
         });
 
         return docContent;

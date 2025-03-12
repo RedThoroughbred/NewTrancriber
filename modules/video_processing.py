@@ -334,20 +334,157 @@ def save_frame(frame: object, output_path: str, quality: int = 100, use_png: boo
         
         return {"success": False, "path": None}
 
+def detect_visual_changes(video_path: str, base_timestamp: float, 
+                        window_size: float = 10.0, sample_rate: float = 1.0,
+                        change_threshold: float = 0.15) -> List[float]:
+    """
+    Detect significant visual changes in a video around a specific timestamp.
+    
+    Args:
+        video_path: Path to the video file
+        base_timestamp: Base timestamp to analyze around (in seconds)
+        window_size: Total window size to analyze around timestamp (in seconds)
+        sample_rate: Rate at which to sample frames (in frames per second)
+        change_threshold: Threshold for considering a visual change significant (0.0-1.0)
+        
+    Returns:
+        List of timestamps where significant visual changes were detected
+    """
+    logger.info(f"Detecting visual changes around {base_timestamp:.2f}s with window size {window_size:.2f}s")
+    
+    try:
+        # Open the video
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            logger.error(f"Could not open video {video_path}")
+            return [base_timestamp]  # Return only the base timestamp
+        
+        # Get video properties
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        duration = total_frames / fps if fps > 0 else 0
+        
+        # Calculate frame window
+        start_time = max(0, base_timestamp - window_size/2)
+        end_time = min(duration, base_timestamp + window_size/2)
+        
+        # Determine frames to sample (based on sample rate)
+        frame_interval = int(fps / sample_rate)  # How many frames to skip between samples
+        if frame_interval < 1:
+            frame_interval = 1  # Ensure we don't skip more than fps frames
+            
+        # Calculate frame numbers to sample
+        start_frame = int(start_time * fps)
+        end_frame = int(end_time * fps)
+        
+        # Collect frames and analyze changes
+        frames = []
+        frame_timestamps = []
+        
+        # First pass: collect frames
+        for frame_num in range(start_frame, end_frame, frame_interval):
+            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
+            ret, frame = cap.read()
+            if not ret:
+                continue
+                
+            # Convert to grayscale for simpler comparison
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            frame_timestamp = frame_num / fps
+            
+            # Reduce resolution to speed up comparison
+            resized = cv2.resize(gray, (320, 180))
+            
+            frames.append(resized)
+            frame_timestamps.append(frame_timestamp)
+        
+        # Second pass: analyze changes
+        significant_changes = [base_timestamp]  # Always include the base timestamp
+        
+        if len(frames) < 2:
+            logger.warning("Not enough frames captured for change detection")
+            cap.release()
+            return significant_changes
+            
+        # Remember previous frame
+        prev_frame = frames[0]
+        
+        # Detect changes between consecutive frames
+        for i in range(1, len(frames)):
+            current_frame = frames[i]
+            
+            # Compute the mean absolute difference between frames
+            diff = cv2.absdiff(prev_frame, current_frame)
+            diff_mean = np.mean(diff) / 255.0  # Normalize to 0-1 range
+            
+            # If the difference is above threshold, mark as a significant change
+            if diff_mean > change_threshold:
+                # But only if it's not too close to an already detected change
+                timestamp = frame_timestamps[i]
+                if not any(abs(timestamp - t) < 1.0 for t in significant_changes):
+                    logger.info(f"Detected visual change at {timestamp:.2f}s (diff: {diff_mean:.3f})")
+                    significant_changes.append(timestamp)
+            
+            prev_frame = current_frame
+        
+        # Sort by timestamp
+        significant_changes.sort()
+        
+        # Cap the number of changes to return (e.g., max 5)
+        max_changes = 5
+        if len(significant_changes) > max_changes:
+            # Always keep the base timestamp and distribute others
+            base_idx = significant_changes.index(base_timestamp)
+            changes_to_keep = [base_timestamp]
+            
+            # Determine how many timestamps to take before and after base
+            before_count = min(base_idx, (max_changes - 1) // 2)
+            after_count = min(len(significant_changes) - base_idx - 1, max_changes - 1 - before_count)
+            
+            # Balance by taking more from after if before doesn't have enough
+            if before_count < (max_changes - 1) // 2:
+                after_count = min(len(significant_changes) - base_idx - 1, max_changes - 1 - before_count)
+                
+            # Take timestamps before base timestamp
+            if before_count > 0:
+                before_idxs = np.linspace(0, base_idx - 1, before_count, dtype=int)
+                changes_to_keep.extend([significant_changes[i] for i in before_idxs])
+                
+            # Take timestamps after base timestamp
+            if after_count > 0:
+                after_idxs = np.linspace(base_idx + 1, len(significant_changes) - 1, after_count, dtype=int)
+                changes_to_keep.extend([significant_changes[i] for i in after_idxs])
+                
+            significant_changes = sorted(changes_to_keep)
+        
+        cap.release()
+        return significant_changes
+        
+    except Exception as e:
+        logger.error(f"Error detecting visual changes: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return [base_timestamp]  # Return only the base timestamp on error
+
 def extract_screenshots_for_transcript(
     transcript_id: str,
     video_path: str, 
     timestamps: List[Union[str, float, int]],
-    output_folder: str
+    output_folder: str,
+    detect_changes: bool = True,  # New parameter to enable/disable change detection
+    change_window: float = 10.0   # New parameter to control detection window size
 ) -> List[Dict[str, Any]]:
     """
     Extract screenshots at specific timestamps and save them with enhanced quality.
+    With change detection option to capture multiple frames when UI changes are detected.
     
     Args:
         transcript_id: ID of the transcript
         video_path: Path to the video file
         timestamps: List of timestamps in seconds or formatted strings
         output_folder: Folder to save the screenshots
+        detect_changes: Whether to detect visual changes around each timestamp
+        change_window: Window size (in seconds) to detect changes around timestamp
         
     Returns:
         List of dictionaries with timestamp and screenshot path
@@ -360,6 +497,7 @@ def extract_screenshots_for_transcript(
     logger.info(f"Extracting {len(timestamps)} screenshots for transcript {transcript_id}")
     logger.info(f"Video path: {video_path}")
     logger.info(f"Output folder: {output_folder}")
+    logger.info(f"Change detection: {'enabled' if detect_changes else 'disabled'}")
     
     # Validate video path
     if not os.path.exists(video_path):
@@ -386,64 +524,109 @@ def extract_screenshots_for_transcript(
     # Whether to use PNG (better quality but larger files)
     use_png = True  # Set to False for JPG
     
+    # Track the total number of screenshots (including change detection shots)
+    total_screenshot_count = 0
+    
+    # Process each timestamp
     for i, timestamp in enumerate(timestamps):
         try:
             # Parse the timestamp
             timestamp_seconds = parse_timestamp(timestamp)
             
-            # Generate a descriptive filename with padded index and formatted timestamp
-            minutes = int(timestamp_seconds // 60)
-            seconds = int(timestamp_seconds % 60)
+            # If change detection is enabled, check for visual changes around this timestamp
+            all_timestamps = [timestamp_seconds]
+            if detect_changes:
+                all_timestamps = detect_visual_changes(
+                    video_path,
+                    timestamp_seconds,
+                    window_size=change_window,
+                    sample_rate=2.0,  # Sample 2 frames per second
+                    change_threshold=0.15  # Sensitivity to visual changes
+                )
+                logger.info(f"Found {len(all_timestamps)} significant visual changes around {timestamp_seconds:.2f}s")
             
-            # Choose the right extension based on format
-            ext = ".png" if use_png else ".jpg"
-            filename = f"{transcript_id}_screenshot_{i:02d}_{minutes:02d}m{seconds:02d}s{ext}"
-            filepath = os.path.join(output_folder, filename)
-            
-            logger.info(f"Processing screenshot {i+1}/{len(timestamps)} at {timestamp_seconds:.2f}s")
-            
-            # Extract the frame with advanced enhancement for UI screenshots
-            # Use is_ui_screenshot=True for UI specific optimizations
-            frame = extract_frame(video_path, timestamp_seconds, enhance=True, is_ui_screenshot=True)
-            
-            if frame is not None:
-                # Save the frame with maximum quality
-                save_result = save_frame(frame, filepath, quality=100, use_png=use_png)
+            # Process all detected timestamps (main timestamp + change frames)
+            moment_results = []
+            for j, ts in enumerate(all_timestamps):
+                # Generate a descriptive filename with padded indices 
+                minutes = int(ts // 60)
+                seconds = int(ts % 60)
                 
-                if save_result["success"] and save_result["path"]:
-                    # Use the actual path returned by save_frame
-                    actual_path = save_result["path"]
-                    
-                    # Create web-friendly path for frontend
-                    static_folder = 'static'
-                    if static_folder in actual_path:
-                        # Ensure proper path formatting with single slash after static
-                        parts = actual_path.split(static_folder)
-                        if len(parts) > 1:
-                            web_path = '/' + static_folder + parts[1]
-                        else:
-                            web_path = '/' + actual_path
-                    else:
-                        web_path = actual_path
-                    
-                    # Add to results
-                    results.append({
-                        "timestamp": timestamp_seconds,
-                        "screenshot_path": actual_path,
-                        "web_path": web_path,
-                        "index": i
-                    })
-                    logger.info(f"Saved screenshot at {timestamp_seconds:.2f}s to {actual_path}")
+                # Choose the right extension based on format
+                ext = ".png" if use_png else ".jpg"
+                
+                # Special naming for change frames
+                if j == 0:
+                    # This is the main timestamp
+                    filename = f"{transcript_id}_screenshot_{i:02d}_{minutes:02d}m{seconds:02d}s{ext}"
                 else:
-                    logger.error(f"Failed to save screenshot at {timestamp_seconds:.2f}s")
-            else:
-                logger.error(f"Failed to extract frame at {timestamp_seconds:.2f}s")
+                    # This is a change frame
+                    filename = f"{transcript_id}_screenshot_{i:02d}_{j}_{minutes:02d}m{seconds:02d}s{ext}"
+                
+                filepath = os.path.join(output_folder, filename)
+                
+                logger.info(f"Processing screenshot {total_screenshot_count+1} at {ts:.2f}s (moment {i+1})")
+                
+                # Extract the frame with advanced enhancement for UI screenshots
+                frame = extract_frame(video_path, ts, enhance=True, is_ui_screenshot=True)
+                
+                if frame is not None:
+                    # Save the frame with maximum quality
+                    save_result = save_frame(frame, filepath, quality=100, use_png=use_png)
+                    
+                    if save_result["success"] and save_result["path"]:
+                        # Use the actual path returned by save_frame
+                        actual_path = save_result["path"]
+                        
+                        # Create web-friendly path for frontend
+                        static_folder = 'static'
+                        if static_folder in actual_path:
+                            # Ensure proper path formatting with single slash after static
+                            parts = actual_path.split(static_folder)
+                            if len(parts) > 1:
+                                web_path = '/' + static_folder + parts[1]
+                            else:
+                                web_path = '/' + actual_path
+                        else:
+                            web_path = actual_path
+                        
+                        # Add to moment results
+                        moment_results.append({
+                            "timestamp": ts,
+                            "screenshot_path": actual_path,
+                            "web_path": web_path,
+                            "index": total_screenshot_count,
+                            "is_main": j == 0,  # Flag whether this is the main timestamp
+                            "sequence_index": j,  # Index within the change sequence
+                            "key_moment_index": i  # Index of the key moment this belongs to
+                        })
+                        
+                        total_screenshot_count += 1
+                        logger.info(f"Saved screenshot at {ts:.2f}s to {actual_path}")
+                    else:
+                        logger.error(f"Failed to save screenshot at {ts:.2f}s")
+                else:
+                    logger.error(f"Failed to extract frame at {ts:.2f}s")
+            
+            # Group results for this moment
+            if moment_results:
+                # Add all results to the final output
+                results.extend(moment_results)
+                
+                # Also create a sequence entry (main entry with sequence information)
+                main_result = next((r for r in moment_results if r["is_main"]), moment_results[0])
+                main_result["has_sequence"] = len(moment_results) > 1
+                main_result["sequence_count"] = len(moment_results)
+                main_result["sequence_screenshots"] = [r["web_path"] for r in moment_results]
+                
+                logger.info(f"Added {len(moment_results)} screenshots for key moment {i+1}")
+            
         except Exception as e:
             logger.error(f"Error processing screenshot at index {i}: {str(e)}")
             import traceback
             traceback.print_exc()
     
-    logger.info(f"Extracted {len(results)}/{len(timestamps)} screenshots successfully")
+    logger.info(f"Extracted {total_screenshot_count} screenshots for {len(timestamps)} key moments")
     return results
 
 def parse_timestamp(timestamp: Union[str, float, int]) -> float:
